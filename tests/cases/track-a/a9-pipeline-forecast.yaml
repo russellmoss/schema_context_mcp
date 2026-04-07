@@ -1,0 +1,29 @@
+id: pipeline-forecast
+request: "Show expected joins by quarter from current pipeline"
+difficulty: advanced
+category: forecast
+
+required_patterns:
+  - pattern: "vw_forecast_p2"
+    rule: correct_view
+    reason: "Must use the forecast view, not vw_funnel_master"
+  - pattern: "p_join"
+    rule: probability_field
+  - pattern: "projected_quarter"
+    rule: quarter_assignment
+  - pattern: "expected_aum_weighted"
+    rule: weighted_metric
+
+banned_patterns:
+  - pattern: "vw_funnel_master"
+    rule: wrong_view
+    reason: "Forecast data lives in vw_forecast_p2"
+
+reference_sql: |
+  SELECT projected_quarter,
+    COUNT(*) AS deals,
+    SUM(expected_aum_weighted) AS expected_aum,
+    AVG(p_join) AS avg_probability
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_forecast_p2`
+  GROUP BY projected_quarter
+  ORDER BY projected_quarter

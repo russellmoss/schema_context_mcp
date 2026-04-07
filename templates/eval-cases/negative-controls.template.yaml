@@ -1,0 +1,42 @@
+# Negative Controls — Tests that verify the system does NOT apply rules incorrectly
+# These catch over-application of rules (false positives from lint_query).
+# Never auto-generated — requires domain understanding of when rules should NOT fire.
+#
+# Required fields per control: id, request, difficulty, category
+# Required (at least one): negative_controls or required_patterns
+# negative_controls array — each entry requires:
+#   description:    What the test verifies
+#   banned_pattern: A pattern that must NOT appear (the rule must not fire here)
+#   reason:         Why the rule should not apply in this context
+# Optional: reference_sql (correct SQL for this query)
+#
+# Negative controls are paired with positive tests. If Track A test says
+# "require pattern X in context Y," the negative control says
+# "do NOT require pattern X in context Z."
+
+# Example (e-commerce):
+# - id: neg-deleted-at-admin
+#   request: "Show me all orders including deleted ones for the admin audit."
+#   difficulty: basic
+#   category: admin_query
+#   negative_controls:
+#     - description: "Must NOT ban deleted_at when explicitly requested for audit"
+#       banned_pattern: "is_active"
+#       reason: "Admin audit queries legitimately need deleted_at access"
+#   reference_sql: |
+#     SELECT order_id, deleted_at, status
+#     FROM `project.dataset.orders_summary`
+#     WHERE deleted_at IS NOT NULL
+#     ORDER BY deleted_at DESC
+#
+# - id: neg-total-price-shipping
+#   request: "What is the total amount including tax and shipping per order?"
+#   difficulty: basic
+#   category: finance_query
+#   required_patterns:
+#     - pattern: "total_price"
+#       reason: "total_price is correct here — we want tax+shipping included"
+#   reference_sql: |
+#     SELECT order_id, total_price
+#     FROM `project.dataset.orders_summary`
+#     WHERE status = 'completed'

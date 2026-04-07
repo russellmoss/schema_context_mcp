@@ -1,0 +1,24 @@
+name: Eval Suite
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run eval suite
+        run: npm run eval -- --cases ./tests/cases/ --config ./config/schema-config.yaml
+        env:
+          WAREHOUSE_CONNECTOR: bigquery
+          BIGQUERY_PROJECT: ${{ secrets.BIGQUERY_PROJECT }}
+          BIGQUERY_KEY_FILE: ${{ secrets.BIGQUERY_KEY_FILE }}

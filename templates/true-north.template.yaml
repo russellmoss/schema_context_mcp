@@ -1,0 +1,37 @@
+# True-North Fixtures — Business-approved historical values
+# These serve as the promotion gate. Failures block promotion to L2+.
+# Only add values that have been verified by a business owner.
+#
+# Required fields: id, period, type, expected, source, owner, last_verified
+# Optional fields: notes
+#
+# id:            Unique identifier — convention: <team>_<period>_<metric_type>
+# period:        Human-readable period (e.g., "Q1 2025", "2025-01")
+# type:          Your metric category name (e.g., topline_revenue, conversion_rates)
+# expected:      Key-value pairs of metric names to business-approved numbers
+# source:        Always 'business_approved' for true-north fixtures
+# owner:         Team or person who approved the number
+# last_verified: Date of last human verification (YYYY-MM-DD)
+
+true_north: []
+  # Example (e-commerce):
+  # - id: acme_q1_2025_revenue
+  #   period: "Q1 2025"
+  #   type: topline_revenue
+  #   expected:
+  #     total_revenue: 1250000
+  #     order_count: 8400
+  #     aov: 148.81
+  #   source: business_approved
+  #   owner: Finance
+  #   last_verified: "2025-04-15"
+  #
+  # - id: acme_q1_2025_conversion
+  #   period: "Q1 2025"
+  #   type: conversion_rates
+  #   expected:
+  #     cart_to_purchase: 0.032
+  #     checkout_completion: 0.71
+  #   source: business_approved
+  #   owner: Growth
+  #   last_verified: "2025-04-15"

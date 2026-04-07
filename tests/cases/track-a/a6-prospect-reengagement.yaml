@@ -1,0 +1,25 @@
+id: prospect-count-with-reengagement
+request: "How many prospects entered the funnel in March 2026?"
+difficulty: intermediate
+category: volume_metric
+
+required_patterns:
+  - pattern: "FilterDate"
+    rule: correct_date_field
+  - pattern: "TIMESTAMP("
+    rule: date_type_safety
+    reason: "FilterDate is TIMESTAMP"
+
+banned_patterns:
+  - pattern: "recordtypeid"
+    rule: lead_level_no_recordtype
+    reason: "Lead-level metrics include re-engagement. No recordtypeid filter."
+  - pattern: "lead_record_source = 'Lead'"
+    rule: includes_reengagement
+    reason: "Unless explicitly asked, prospects include re-engagement"
+
+reference_sql: |
+  SELECT COUNT(*) AS prospect_count
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  WHERE TIMESTAMP(v.FilterDate) >= TIMESTAMP('2026-03-01')
+    AND TIMESTAMP(v.FilterDate) < TIMESTAMP('2026-04-01')

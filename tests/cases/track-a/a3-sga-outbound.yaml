@@ -1,0 +1,36 @@
+id: sga-outbound-effort
+request: "Total outbound touchpoints per SGA for Q1 2026"
+difficulty: basic
+category: activity_metric
+
+required_patterns:
+  - pattern: "direction = 'Outbound'"
+    rule: outbound_filter
+  - pattern: "is_engagement_tracking = 0"
+    rule: sga_outbound_filters
+  - pattern: "[lemlist]"
+    rule: sga_outbound_filters
+  - pattern: "ListEmail"
+    rule: sga_outbound_filters
+  - pattern: "task_executor_name"
+    rule: executor_attribution
+    reason: "Individual effort uses executor, not lead owner"
+
+banned_patterns:
+  - pattern: "SGA_Owner_Name__c"
+    rule: executor_vs_owner
+    reason: "For effort measurement, use task_executor_name"
+  - pattern: "task_who_id"
+    rule: correct_join_key
+    reason: "Use Full_prospect_id__c for lead linkage"
+
+reference_sql: |
+  SELECT act.task_executor_name, COUNT(DISTINCT act.task_id) AS outbound_touchpoints
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+  WHERE act.direction = 'Outbound'
+    AND act.is_engagement_tracking = 0
+    AND COALESCE(act.task_subject, '') NOT LIKE '%[lemlist]%'
+    AND COALESCE(act.task_subtype, '') != 'ListEmail'
+    AND act.task_created_date_est >= DATE('2026-01-01')
+    AND act.task_created_date_est < DATE('2026-04-01')
+  GROUP BY 1 ORDER BY 2 DESC

@@ -1,0 +1,40 @@
+- id: workflow-data-analysis
+  request: "For QTD, what is the average number of initial calls per week for active SGAs?"
+  difficulty: advanced
+  category: activity_analysis
+  required_patterns:
+    - pattern: "vw_sga_activity_performance"
+      reason: "Must use activity view"
+    - pattern: "task_executor_name"
+      reason: "Individual effort measurement"
+
+- id: workflow-feature-explore
+  request: "Add a new metric to SGA Hub showing average touches before lead closes"
+  difficulty: advanced
+  category: activity_analysis
+  required_patterns:
+    - pattern: "vw_sga_activity_performance"
+      reason: "Activity data source"
+    - pattern: "Full_prospect_id__c"
+      reason: "Correct join key"
+
+- id: workflow-explore-query
+  request: "Show me SQO conversion rate by channel for Q4 2025 in cohort mode"
+  difficulty: advanced
+  category: conversion_rate
+  required_patterns:
+    - pattern: "sql_to_sqo_progression"
+      reason: "Cohort mode numerator"
+    - pattern: "eligible_for_sql_conversions"
+      reason: "Cohort mode denominator"
+    - pattern: "Channel_Grouping_Name"
+      reason: "Canonical channel field"
+
+- id: workflow-adhoc
+  request: "Why do some contacted leads show zero outbound touchpoints?"
+  difficulty: advanced
+  category: activity_analysis
+  knowledge_assertions:
+    - question: "Why zero touchpoints for contacted leads?"
+      expected: "ghost"
+      tool: describe_view

@@ -1,0 +1,54 @@
+true_north:
+  - id: q1_2025_topline_funnel
+    period: Q1 2025
+    type: topline_funnel
+    expected:
+      sqls: 122
+      sqos: 96
+      signed_advisors: 11
+      signed_aum: 472900000
+      advisors_joined: 12
+      joined_aum: 462900000
+      open_pipeline_aum: 26500000000
+    source: business_approved
+    owner: RevOps
+    last_verified: "2026-04-07"
+
+  - id: q1_2025_conversion_rates
+    period: Q1 2025
+    type: conversion_rates_resolved_only
+    expected:
+      contacted_to_mql: 0.056
+      mql_to_sql: 0.323
+      sql_to_sqo: 0.708
+      sqo_to_joined: 0.122
+    source: business_approved
+    owner: RevOps
+    last_verified: "2026-04-07"
+
+  - id: q2_2025_topline_funnel
+    period: Q2 2025
+    type: topline_funnel
+    expected:
+      sqls: 155
+      sqos: 110
+      signed_advisors: 19
+      signed_aum: 1500000000
+      advisors_joined: 12
+      joined_aum: 578000000
+      open_pipeline_aum: 26500000000
+    source: business_approved
+    owner: RevOps
+    last_verified: "2026-04-07"
+
+  - id: q2_2025_conversion_rates
+    period: Q2 2025
+    type: conversion_rates_resolved_only
+    expected:
+      contacted_to_mql: 0.048
+      mql_to_sql: 0.402
+      sql_to_sqo: 0.686
+      sqo_to_joined: 0.120
+    source: business_approved
+    owner: RevOps
+    last_verified: "2026-04-07"

@@ -1,0 +1,32 @@
+id: true-cold-calls
+request: "How many true cold calls did each SGA make per week in Q1?"
+difficulty: advanced
+category: activity_analysis
+
+required_patterns:
+  - pattern: "is_true_cold_call"
+    rule: correct_cold_call_flag
+  - pattern: "task_executor_name"
+    rule: executor_attribution
+    reason: "Effort measurement uses executor, not lead owner"
+  - pattern: "direction = 'Outbound'"
+    rule: outbound_filter
+
+banned_patterns:
+  - pattern: "is_cold_call"
+    without: "is_true_cold_call"
+    rule: strict_cold_call
+    reason: "is_cold_call is loose definition. is_true_cold_call is the strict version."
+  - pattern: "SGA_Owner_Name__c"
+    rule: executor_vs_owner
+    reason: "For effort measurement, use task_executor_name"
+
+reference_sql: |
+  SELECT task_executor_name,
+    DATE_TRUNC(task_created_date_est, WEEK) AS week,
+    COUNT(CASE WHEN is_true_cold_call = 1 THEN 1 END) AS true_cold_calls
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance`
+  WHERE direction = 'Outbound'
+    AND task_created_date_est >= DATE('2026-01-01')
+    AND task_created_date_est < DATE('2026-04-01')
+  GROUP BY 1, 2 ORDER BY 1, 2

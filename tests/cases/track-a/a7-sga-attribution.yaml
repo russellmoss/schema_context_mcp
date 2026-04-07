@@ -1,0 +1,27 @@
+id: sga-sqo-attribution
+request: "How many SQOs did SGA 'Jane Smith' generate in Q1?"
+difficulty: intermediate
+category: attribution
+
+required_patterns:
+  - pattern: "SGA_Owner_Name__c"
+    rule: dual_attribution_lead
+  - pattern: "Opp_SGA_Name__c"
+    rule: dual_attribution_opp
+  - pattern: "is_sqo_unique = 1"
+    rule: sqo_volume_dedup
+  - pattern: "recordtypeid"
+    rule: re_engagement_exclusion
+
+banned_patterns:
+  - pattern: "task_executor_name"
+    rule: wrong_attribution_field
+    reason: "SQO attribution uses lead/opp ownership, not task execution"
+
+reference_sql: |
+  SELECT COUNT(CASE WHEN v.is_sqo_unique = 1 THEN 1 END) AS sqo_count
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  WHERE v.recordtypeid = '012Dn000000mrO3IAI'
+    AND (v.SGA_Owner_Name__c = 'Jane Smith' OR v.Opp_SGA_Name__c = 'Jane Smith')
+    AND TIMESTAMP(v.Date_Became_SQO__c) >= TIMESTAMP('2026-01-01')
+    AND TIMESTAMP(v.Date_Became_SQO__c) <= TIMESTAMP('2026-03-31 23:59:59')

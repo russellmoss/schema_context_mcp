@@ -1,0 +1,116 @@
+# Schema Context MCP — Configuration Template
+# Replace all <PLACEHOLDER> values with your environment details.
+# See docs/onboarding-guide.md for field-by-field instructions.
+#
+# Tip: Start with connection + one view + a few fields. Add more incrementally.
+
+connection:
+  connector: bigquery          # Only 'bigquery' supported in v1
+  project: <YOUR_GCP_PROJECT>  # Required — your GCP project ID
+  datasets:
+    - <YOUR_PRIMARY_DATASET>   # Required — at least one dataset
+  # key_file: ./path/to/service-account.json  # Optional; omit to use Application Default Credentials
+
+# Views — annotate your most important analytics views
+# Start with your primary reporting view; add others incrementally.
+# Each view entry describes one table or view in your warehouse.
+views:
+  # Example (e-commerce):
+  # orders_summary:
+  #   purpose: "Aggregated order metrics including revenue, item counts, and fulfillment status per order."
+  #   grain: "One row per order"
+  #   key_filters:
+  #     completed_orders:
+  #       sql: "status = 'completed' AND cancelled_at IS NULL"
+  #     refunded:
+  #       sql: "refund_status = 'full_refund'"
+  #   dangerous_columns:
+  #     - column: total_price
+  #       reason: "Includes tax and shipping. Use subtotal_price for product revenue."
+  #       use_instead: subtotal_price
+  #   consumers:
+  #     - "Revenue dashboard"
+  #     - "Monthly finance report"
+  #   recommended_date_fields:
+  #     order_date: "created_at (TIMESTAMP)"
+  #   freshness_notes: "Synced from Shopify every 4 hours."
+
+# Fields — annotate fields that are confusing, dangerous, or commonly misused
+# Focus on dedup flags, type-confused dates, and overloaded names.
+fields:
+  # Example (e-commerce):
+  # subtotal_price:
+  #   meaning: "Product revenue excluding tax and shipping."
+  #   type: NUMERIC
+  #   gotcha: "Does not include discounts applied after checkout."
+  #   use_instead_of: total_price   # Optional — marks total_price as the less-preferred alternative
+
+# Rules — typed primitives that lint_query checks
+# Types: ban_pattern, prefer_field, require_filter, date_type_rule
+# Each rule must have a unique id, a type, a severity (error | warning | info), and a message.
+rules: []
+  # Example — ban_pattern:
+  # - id: no_deleted_orders
+  #   type: ban_pattern
+  #   pattern: "deleted_at IS NULL"
+  #   severity: error
+  #   message: "Use the is_active flag instead of checking deleted_at directly."
+  #
+  # Example — prefer_field:
+  # - id: revenue_use_subtotal
+  #   type: prefer_field
+  #   found: "total_price"
+  #   prefer: "subtotal_price"
+  #   context: "revenue calculations"
+  #   severity: warning
+  #   message: "Use subtotal_price for product revenue — total_price includes tax and shipping."
+  #
+  # Example — require_filter:
+  # - id: orders_require_status
+  #   type: require_filter
+  #   when_contains:
+  #     - "COUNT"
+  #     - "SUM"
+  #   required: "status"
+  #   severity: warning
+  #   message: "Filter on status when aggregating orders to avoid counting cancelled orders."
+  #
+  # Example — date_type_rule:
+  # - id: date_created_at
+  #   type: date_type_rule
+  #   field: "created_at"
+  #   expected_type: TIMESTAMP
+  #   wrong_wrapper: "DATE(created_at)"
+  #   correct_wrapper: "TIMESTAMP(created_at)"
+  #   severity: warning
+  #   message: "created_at is TIMESTAMP — use TIMESTAMP() wrapper for comparisons."
+
+# Terms — business vocabulary definitions
+# Define abbreviations, acronyms, and overloaded terms your team uses.
+terms: {}
+  # Example (e-commerce):
+  # AOV:
+  #   definition: "Average Order Value — mean revenue per completed order."
+  #   related_fields:
+  #     - subtotal_price
+  #   related_rules:
+  #     - revenue_use_subtotal
+  #   gotcha: "Exclude refunded orders when computing AOV."
+
+# Metrics — conversion rate or volume calculations
+# Only add when you have well-defined, stable metric definitions.
+# Metrics require domain expertise — do not auto-generate these.
+metrics: {}
+  # Example (e-commerce):
+  # cart_to_purchase:
+  #   description: "Conversion rate from cart creation to completed purchase."
+  #   modes:
+  #     period:
+  #       numerator: completed_orders_count
+  #       denominator: carts_created_count
+  #       gotcha: "Can exceed 100% — numerator and denominator use different date anchors."
+  #     cohort:
+  #       numerator: cohort_purchased
+  #       denominator: cohort_carted
+  #       anchor_date: cart_created_at
+  #       gotcha: "Recent cohorts look low — carts still converting."

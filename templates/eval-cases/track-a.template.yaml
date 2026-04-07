@@ -1,0 +1,55 @@
+# Track A — SQL Correctness
+# Tests that reference SQL contains correct patterns and avoids banned patterns.
+# Requires human-authored reference_sql — do NOT auto-generate these.
+#
+# Required fields: id, request, difficulty, category, reference_sql
+# Required (at least one): required_patterns or banned_patterns
+# Optional fields: expected_tool_calls
+#
+# id:                Unique — convention: <team>-a<N>-<short-description>
+# request:           Natural language question an agent would receive
+# difficulty:        basic | intermediate | advanced
+# category:          Your category name (e.g., volume_query, conversion_rate, aggregation)
+# required_patterns: Array of patterns that MUST appear in correct SQL
+#   - pattern:       Substring that must appear
+#     rule:          Rule ID from config that this pattern enforces
+#     reason:        Why this pattern is required
+# banned_patterns:   Array of patterns that must NOT appear
+#   - pattern:       Substring that must not appear
+#     without:       Exception — pattern is OK if this substring is also present (optional)
+#     rule:          Rule ID from config
+#     reason:        Why this pattern is dangerous
+# reference_sql:     Human-authored correct SQL for this query
+# expected_tool_calls: Optional metadata listing which tools an agent should call
+
+# Example (e-commerce):
+# id: acme-a1-revenue-by-channel
+# request: "What was total revenue by channel for Q1 2025?"
+# difficulty: basic
+# category: revenue_query
+#
+# required_patterns:
+#   - pattern: "subtotal_price"
+#     rule: revenue_use_subtotal
+#     reason: "Must use subtotal for product revenue, not total_price"
+#   - pattern: "status = 'completed'"
+#     rule: orders_require_status
+#     reason: "Must filter to completed orders"
+#
+# banned_patterns:
+#   - pattern: "total_price"
+#     without: "subtotal_price"
+#     rule: revenue_use_subtotal
+#     reason: "total_price includes tax and shipping"
+#
+# reference_sql: |
+#   SELECT channel, SUM(subtotal_price) AS revenue
+#   FROM `project.dataset.orders_summary`
+#   WHERE status = 'completed'
+#     AND TIMESTAMP(created_at) >= TIMESTAMP('2025-01-01')
+#     AND TIMESTAMP(created_at) < TIMESTAMP('2025-04-01')
+#   GROUP BY 1 ORDER BY 2 DESC
+#
+# expected_tool_calls:
+#   - tool: describe_view
+#     args: { view: orders_summary, intent: revenue_by_channel }

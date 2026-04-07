@@ -1,0 +1,41 @@
+# Track B — Knowledge Retrieval
+# Tests that the config contains expected knowledge and tools surface it correctly.
+# In offline mode: checks against JSON.stringify(config)
+# In online mode: calls the named tool and checks the response
+#
+# Required fields per assertion: id, request, difficulty, category, knowledge_assertions
+# knowledge_assertions array — each entry requires:
+#   question: Specific question to test
+#   expected: Substring that must appear in tool response
+#   tool:     Which tool should answer this (describe_view, get_rule, resolve_term, get_metric)
+#
+# Track B cases CAN be auto-generated from source docs (not config) during onboarding.
+# They test: "does the tool return what the source documentation says?"
+
+# Example (e-commerce):
+- id: acme-b1-subtotal-meaning
+  request: "What does subtotal_price mean?"
+  difficulty: basic
+  category: knowledge_retrieval
+  knowledge_assertions:
+    - question: "What does subtotal_price mean?"
+      expected: "excluding tax"
+      tool: describe_view
+
+# - id: acme-b2-aov-definition
+#   request: "What is AOV?"
+#   difficulty: basic
+#   category: knowledge_retrieval
+#   knowledge_assertions:
+#     - question: "What is AOV?"
+#       expected: "Average Order Value"
+#       tool: resolve_term
+#
+# - id: acme-b3-no-deleted-orders
+#   request: "Can I filter deleted orders with deleted_at?"
+#   difficulty: basic
+#   category: knowledge_retrieval
+#   knowledge_assertions:
+#     - question: "Can I filter deleted orders with deleted_at?"
+#       expected: "is_active"
+#       tool: get_rule

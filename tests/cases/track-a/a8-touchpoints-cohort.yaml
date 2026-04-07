@@ -1,0 +1,34 @@
+id: touchpoints-per-lead-cohort
+request: "Average outbound touchpoints per lead for the January 2026 cohort"
+difficulty: advanced
+category: activity_analysis
+
+required_patterns:
+  - pattern: "task_created_date_est >= "
+    rule: activity_date_alignment
+    reason: "Must bound activities to on-or-after lead's FilterDate"
+  - pattern: "Full_prospect_id__c"
+    rule: correct_join_key
+  - pattern: "direction = 'Outbound'"
+    rule: outbound_filter
+  - pattern: "is_engagement_tracking = 0"
+    rule: sga_outbound_filters
+
+banned_patterns:
+  - pattern: "task_who_id"
+    rule: wrong_join_key
+    reason: "task_who_id misses activities logged against the Opportunity"
+
+reference_sql: |
+  SELECT AVG(touchpoints) AS avg_touchpoints
+  FROM (
+    SELECT q.lead_id, COUNT(DISTINCT act.task_id) AS touchpoints
+    FROM leads q
+    INNER JOIN `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+      ON act.Full_prospect_id__c = q.lead_id
+      AND act.task_created_date_est >= q.filter_date
+      AND act.task_created_date_est < DATE('2026-04-01')
+    WHERE act.direction = 'Outbound'
+      AND act.is_engagement_tracking = 0
+    GROUP BY 1
+  )

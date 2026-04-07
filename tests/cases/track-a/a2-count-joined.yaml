@@ -1,0 +1,30 @@
+id: count-joined
+request: "How many advisors joined in Q1 2026?"
+difficulty: basic
+category: volume_metric
+
+required_patterns:
+  - pattern: "is_joined_unique = 1"
+    rule: joined_volume_dedup
+  - pattern: "recordtypeid = '012Dn000000mrO3IAI'"
+    rule: re_engagement_exclusion
+  - pattern: "advisor_join_date__c"
+    rule: correct_date_field
+  - pattern: "DATE("
+    rule: date_type_safety
+    reason: "advisor_join_date__c is DATE, not TIMESTAMP"
+
+banned_patterns:
+  - pattern: "is_joined = 1"
+    without: "is_joined_unique"
+    rule: joined_volume_dedup
+  - pattern: "TIMESTAMP(v.advisor_join_date"
+    rule: date_type_safety
+    reason: "advisor_join_date__c is DATE type"
+
+reference_sql: |
+  SELECT COUNT(CASE WHEN v.is_joined_unique = 1 THEN 1 END) AS joined_count
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  WHERE v.recordtypeid = '012Dn000000mrO3IAI'
+    AND DATE(v.advisor_join_date__c) >= DATE('2026-01-01')
+    AND DATE(v.advisor_join_date__c) <= DATE('2026-03-31')

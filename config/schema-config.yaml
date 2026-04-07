@@ -1,0 +1,685 @@
+connection:
+  connector: bigquery
+  project: savvy-gtm-analytics
+  datasets:
+    - Tableau_Views
+    - SavvyGTMData
+    - savvy_analytics
+
+views:
+  vw_funnel_master:
+    purpose: "Single source of truth combining Lead + Opportunity data for the entire recruiting funnel. All funnel metrics, conversion rates, and drill-downs derive from this view."
+    grain: "One row per lead-opportunity combination"
+    key_filters:
+      active_sqos: "is_sqo_unique = 1 AND recordtypeid = '012Dn000000mrO3IAI'"
+      open_pipeline: "StageName NOT IN ('Closed Lost', 'Joined', 'On Hold', 'Signed')"
+      joined_unique: "is_joined_unique = 1"
+      primary_opp: "is_primary_opp_record = 1"
+    dangerous_columns:
+      - column: is_sqo
+        reason: "Includes duplicates. Use is_sqo_unique for volume counts."
+        use_instead: is_sqo_unique
+      - column: is_primary_opp_record
+        reason: "Only use for AUM aggregation, not for volume counts."
+    consumers:
+      - "src/lib/queries/funnel-metrics.ts"
+      - "src/lib/queries/conversion-rates.ts"
+      - "src/lib/queries/detail-records.ts"
+      - "src/lib/queries/drill-down.ts"
+      - "src/lib/queries/open-pipeline.ts"
+      - "src/lib/queries/source-performance.ts"
+      - "src/lib/queries/export-records.ts"
+      - "src/lib/queries/forecast-rates.ts"
+      - "src/lib/queries/forecast-monte-carlo.ts"
+      - "src/lib/queries/forecast-pipeline.ts"
+      - "src/lib/queries/sga-activity.ts"
+      - "src/lib/queries/sga-leaderboard.ts"
+      - "src/lib/queries/sgm-quota.ts"
+      - "src/lib/queries/sgm-dashboard.ts"
+      - "src/lib/queries/quarterly-progress.ts"
+      - "src/lib/queries/pipeline-catcher.ts"
+      - "src/lib/queries/filter-options.ts"
+      - "src/lib/queries/weekly-actuals.ts"
+      - "src/lib/queries/closed-lost.ts"
+      - "src/lib/queries/re-engagement.ts"
+      - "src/lib/semantic-layer/"
+    recommended_date_fields:
+      sqo_date: "Date_Became_SQO__c (TIMESTAMP)"
+      joined_date: "advisor_join_date__c (DATE)"
+      entry_date: "FilterDate (TIMESTAMP)"
+      closed_date: "Stage_Entered_Closed__c (TIMESTAMP)"
+    freshness_notes: "Depends on SavvyGTMData tables: Lead/Opportunity sync every 6 hours, OpportunityFieldHistory syncs weekly, FinTrx refreshes monthly."
+    notes: "Re-engagement records (recordtypeid = '012VS000009VoxrYAC') are UNION ALL'd into the lead side via ReEngagement_As_Lead CTE and DO affect lead-level metrics. To join activity data from vw_sga_activity_performance, use Full_prospect_id__c as the join key."
+
+  vw_forecast_p2:
+    purpose: "Deterministic expected-value pipeline forecast. Computes P(Join), projected join dates, and expected AUM for each open SQO based on historical stage-to-stage conversion rates from resolved deals (Jun-Dec 2025)."
+    grain: "One row per open opportunity"
+    key_filters:
+      high_probability: "p_join >= 0.5"
+      current_quarter: "projected_quarter = FORMAT_DATE('%Y-Q%Q', CURRENT_DATE())"
+    consumers:
+      - "src/lib/queries/forecast-pipeline.ts"
+      - "src/lib/queries/forecast-export.ts"
+      - "src/app/api/forecast/record/[id]/route.ts"
+    recommended_date_fields:
+      projected_join: "projected_join_date (DATE)"
+      sqo_date: "Date_Became_SQO__c (TIMESTAMP)"
+    freshness_notes: "Derived from vw_funnel_master. Reflects same 6-hour sync cadence."
+    notes: "Use this view (not vw_funnel_master) for forward-looking pipeline forecasting. Join to vw_funnel_master on Full_Opportunity_ID__c for additional lead context. Open pipeline = all rows in this view (pre-filtered to open SQOs)."
+
+  vw_funnel_audit:
+    purpose: "Audit trail for opportunity stage progression — tracks days in each stage, stage velocities, skipped stages, and conversion numerators/denominators."
+    grain: "One row per opportunity"
+    consumers:
+      - "src/lib/queries/forecast-export.ts"
+      - "src/app/api/forecast/record/[id]/route.ts"
+    freshness_notes: "Derived from vw_funnel_master."
+
+  vw_daily_forecast:
+    purpose: "Daily-ized forecast goals broken down by source/channel. Each row = one day with daily target counts for prospects, MQLs, SQLs, SQOs, and Joined."
+    grain: "One row per day per source/channel combination"
+    consumers:
+      - "src/lib/queries/forecast-goals.ts"
+      - "src/lib/semantic-layer/query-templates.ts"
+      - "src/lib/reporting/context.ts"
+    freshness_notes: "Backed by external forecast model, likely manually maintained."
+
+  vw_joined_advisor_location:
+    purpose: "One row per joined advisor with best-available address for map visualization. Coalesces addresses from Contact, FinTrx regulatory data, and Account records. Includes geocoded lat/long."
+    grain: "One row per joined advisor"
+    consumers:
+      - "src/lib/queries/advisor-locations.ts"
+      - "src/app/api/cron/geocode-advisors/route.ts"
+    freshness_notes: "Address data depends on Contact/Account sync (6h) and FinTrx monthly refresh. Geocoded coordinates updated by cron job."
+
+  vw_lost_to_competition:
+    purpose: "Matches closed-lost SQOs to FinTrx regulatory data to determine which firm the advisor moved to after declining Savvy. Uses CRD (Central Registration Depository) number matching."
+    grain: "One row per closed-lost opportunity with a CRD match"
+    consumers:
+      - "src/lib/reporting/context.ts"
+      - "src/lib/reporting/tools.ts"
+    freshness_notes: "Depends on Opportunity sync (6h) and FinTrx monthly refresh. Not consumed by direct dashboard pages — reporting agents only."
+
+  vw_sga_activity_performance:
+    purpose: "Joins Salesforce Task records to vw_funnel_master to categorize SGA activities (calls, SMS, email, LinkedIn, meetings) with direction, quality signals, cold call classification, and ramp status."
+    grain: "One row per task (activity)"
+    key_filters:
+      outbound_effort: "direction = 'Outbound' AND is_engagement_tracking = 0 AND COALESCE(task_subject, '') NOT LIKE '%[lemlist]%' AND COALESCE(task_subtype, '') != 'ListEmail'"
+      cold_calls: "is_true_cold_call = 1"
+      meaningful_connects: "is_meaningful_connect = 1"
+    consumers:
+      - "src/lib/queries/sga-activity.ts"
+      - "src/lib/reporting/context.ts"
+    recommended_date_fields:
+      activity_date: "task_created_date_est (DATE, America/New_York)"
+    freshness_notes: "Task sync every 6 hours. Local SQL file is vw_sga_activity_performance_v2.sql but BQ view name is vw_sga_activity_performance (no v2 suffix)."
+    known_issues:
+      - "Ghost contacts: some Task records have WhoId pointing to deleted Lead/Contact records. These appear as NULL in joined results."
+    notes: "To join activity data to funnel data, use Full_prospect_id__c as the join key between this view and vw_funnel_master. Do NOT use task_who_id — it misses activities logged against the Opportunity."
+
+  geocoded_addresses:
+    purpose: "Stores geocoded lat/long coordinates for joined advisors. Populated by the geocode-advisors cron job."
+    grain: "One row per geocoded address"
+    status: "base_table"
+    consumers:
+      - "vw_joined_advisor_location (LEFT JOIN)"
+      - "src/app/api/cron/geocode-advisors/route.ts"
+
+  q4_2025_forecast:
+    purpose: "Goal-setting table for quarterly targets. Contains quarterly goal allocations used by the forecast and goal-tracking features. ACTIVE despite the q4_ prefix — this table is rolling forward (currently Q4 2025 + Q1 2026 data, Q2 2026 will be added next). The name is a legacy artifact."
+    grain: "One row per source/channel/quarter goal allocation"
+    status: "base_table"
+    consumers:
+      - "src/lib/queries/forecast-goals.ts"
+    freshness_notes: "Backed by Google Sheet. Updated manually when new quarter goals are set."
+
+terms:
+  SQO:
+    definition: "Sales Qualified Opportunity — an opportunity that has passed sales qualification."
+    related_fields:
+      - is_sqo_unique
+      - Date_Became_SQO__c
+      - SQO_raw
+    related_rules:
+      - sqo_volume_dedup
+      - re_engagement_exclusion
+    gotcha: "Use is_sqo_unique for volume counts, not is_sqo. SQL__c in Salesforce means SQO status, not 'SQL' the query language."
+
+  AUM:
+    definition: "Assets Under Management — the total market value of assets managed by an advisor."
+    related_fields:
+      - Underwritten_AUM__c
+      - Amount
+      - Account_Total_AUM__c
+    gotcha: "Always COALESCE(Underwritten_AUM__c, Amount) — never add them. Use is_primary_opp_record = 1 for AUM aggregation to avoid double-counting."
+
+  MQL:
+    definition: "Marketing Qualified Lead — a lead that has met marketing qualification criteria."
+    related_fields:
+      - converted_date_raw
+      - eligible_for_mql_conversions
+      - mql_to_sql_progression
+
+  SQL:
+    definition: "Sales Qualified Lead — a lead that has been accepted by the sales team."
+    related_fields:
+      - eligible_for_sql_conversions
+      - sql_to_sqo_progression
+    gotcha: "SQL__c in Salesforce refers to SQO status, not the query language or 'Sales Qualified Lead' stage."
+
+  FilterDate:
+    definition: "COALESCE of funnel entry dates — the timestamp when a lead first entered the recruiting funnel."
+    related_fields:
+      - FilterDate
+    gotcha: "Not a calendar filter. It is the lead's entry point into the funnel. TIMESTAMP type, not DATE."
+
+  CRD:
+    definition: "Central Registration Depository — unique advisor identifier used in FinTrx regulatory data for advisor matching."
+    related_fields:
+      - FA_CRD__c
+      - RIA_CONTACT_CRD_ID
+    gotcha: "CRD is stored as STRING in Salesforce but may be numeric in FinTrx. Cast before matching."
+
+  Re-engagement:
+    definition: "A previously closed-lost opportunity that re-enters the pipeline. Identified by recordtypeid = '012VS000009VoxrYAC'."
+    related_fields:
+      - recordtypeid
+    related_rules:
+      - re_engagement_exclusion
+    gotcha: "Re-engagement records are UNION ALL'd into the lead side of vw_funnel_master and DO affect lead-level metrics."
+
+  SGA:
+    definition: "Sales Growth Associate — the SDR/BDR role responsible for outbound prospecting and activity."
+    related_fields:
+      - SGA__c
+      - IsSGA
+      - task_executor_name
+    gotcha: "SGA__c is a User ID, not a boolean. Join to User table to get the name."
+
+  SGM:
+    definition: "Sales Growth Manager — the AE/closer role responsible for pipeline management and closing deals."
+    related_fields:
+      - OwnerId
+      - Owner_Name
+
+  Finance_View__c:
+    definition: "The canonical source for marketing channel grouping on opportunities. Replaces the deprecated new_mapping table."
+    related_fields:
+      - Finance_View__c
+      - Channel_Grouping_Name
+    gotcha: "vw_funnel_master now computes Channel_Grouping_Name inline from Finance_View__c via a CASE statement. Do NOT use new_mapping."
+
+  Joined:
+    definition: "An advisor who has completed the onboarding process and is actively on the Savvy platform."
+    related_fields:
+      - is_joined_unique
+      - advisor_join_date__c
+    gotcha: "Use is_joined_unique = 1 for volume counts. advisor_join_date__c is DATE type, not TIMESTAMP."
+
+  Marketing_Segment:
+    definition: "FinTrx-derived firm-type classification synced to Salesforce. 4 segments: OTHER, CAPTIVE_W2, INDEPENDENT_PLATFORM, RIA_OWNER."
+    related_fields:
+      - Marketing_Segment__c
+    gotcha: "This is a categorical classification from FinTrx advisor_segments, not a score. Do not confuse with Lead_Score_Tier__c."
+
+  channel:
+    definition: "Marketing channel — the source/medium through which a prospect entered the funnel. The canonical field is Finance_View__c, grouped into Channel_Grouping_Name."
+    related_fields:
+      - Finance_View__c
+      - Channel_Grouping_Name
+    related_rules:
+      - no_new_mapping
+    gotcha: "Do not use new_mapping (deprecated). Finance_View__c is the canonical source. Channel_Grouping_Name groups Finance_View__c values into Recruitment Firm, Marketing, Referral, etc."
+
+  joined_advisor:
+    definition: "An advisor who has completed onboarding and is actively on the Savvy platform. Identified by is_joined_unique = 1 in vw_funnel_master or presence in vw_joined_advisor_location."
+    related_fields:
+      - is_joined_unique
+      - is_joined
+      - advisor_join_date__c
+    related_rules:
+      - joined_volume_dedup
+      - joined_exclude_closed_lost
+    gotcha: "Use is_joined_unique for volume counts. Do not use advisor_join_date__c IS NOT NULL alone — Closed Lost advisors can have join dates."
+
+  pipeline:
+    definition: "The set of open opportunities progressing through the recruiting funnel. Stages: Qualifying → Discovery → Sales Process → Negotiating → Signed → Joined. 'Pipeline' generally refers to SQOs that are not yet resolved."
+    related_fields:
+      - StageName
+      - is_sqo_unique
+      - recordtypeid
+    gotcha: "Pipeline metrics require recordtypeid = '012Dn000000mrO3IAI' (Recruiting) to exclude re-engagement. For AUM, use is_primary_opp_record = 1."
+
+  open_pipeline:
+    definition: "Opportunities that are active SQOs and not yet resolved — StageName NOT IN ('Closed Lost', 'Joined', 'On Hold', 'Signed'). Use vw_funnel_master with the open_pipeline key_filter, or vw_forecast_p2 (pre-filtered to open SQOs)."
+    related_fields:
+      - StageName
+      - is_sqo_unique
+      - Opportunity_AUM
+      - expected_aum_weighted
+    gotcha: "For raw open pipeline, query vw_funnel_master with the open_pipeline filter. For probability-weighted forecasting, use vw_forecast_p2 which pre-computes p_join and expected_aum_weighted."
+
+fields:
+  FilterDate:
+    meaning: "COALESCE(Lead_FilterDate, Opp_CreatedDate, Date_Became_SQO__c, TIMESTAMP(advisor_join_date__c)) — when the prospect meaningfully entered the funnel."
+    type: TIMESTAMP
+    gotcha: "Not a calendar filter — it is the lead's entry point into the funnel. TIMESTAMP type."
+
+  converted_date_raw:
+    meaning: "Lead-to-Opportunity conversion date. The date a lead became an SQL."
+    type: DATE
+    gotcha: "DATE type, not TIMESTAMP. Use DATE() wrapper, not TIMESTAMP()."
+
+  advisor_join_date__c:
+    meaning: "Official join date for a joined advisor."
+    type: DATE
+    gotcha: "DATE type, not TIMESTAMP. Use DATE() wrapper."
+
+  Date_Became_SQO__c:
+    meaning: "Timestamp when SQL__c became 'Yes' — when the opportunity became an SQO."
+    type: TIMESTAMP
+
+  Stage_Entered_Closed__c:
+    meaning: "Timestamp when the opportunity entered Closed Lost stage."
+    type: TIMESTAMP
+    gotcha: "Legacy gap: 3.6% populated for 2023, 65.4% for 2024, 74.5% for 2025. Use for post-2024 analysis only."
+
+  is_sqo:
+    meaning: "Binary flag (0/1): LOWER(SQO_raw) = 'yes'. Indicates opportunity is qualified."
+    type: INTEGER
+    use_instead_of: is_sqo_unique
+    gotcha: "Includes duplicates when multiple leads convert to the same opportunity. Use for rate calculations, NOT volume counts. Use is_sqo_unique for volume."
+
+  is_sqo_unique:
+    meaning: "Dedup flag for SQO volume counts — 1 means first qualifying opp per lead. is_sqo = 1 AND (no opp OR opp_row_num = 1)."
+    type: INTEGER
+    gotcha: "Use this for SQO volume counts. Do NOT use for rate calculations (use is_sqo instead)."
+
+  is_joined:
+    meaning: "Binary flag (0/1): advisor has joined (advisor_join_date__c IS NOT NULL OR StageName = 'Joined') AND StageName != 'Closed Lost'."
+    type: INTEGER
+    gotcha: "Excludes Closed Lost who previously had a join date."
+
+  is_joined_unique:
+    meaning: "Dedup flag for Joined volume counts — is_joined = 1 AND (no opp OR opp_row_num = 1)."
+    type: INTEGER
+    gotcha: "Use this for Joined volume counts. Do NOT use for rate calculations (use is_joined instead)."
+
+  is_primary_opp_record:
+    meaning: "opp_row_num = 1 OR no opportunity. Dedup flag ensuring one record per opportunity."
+    type: INTEGER
+    gotcha: "Only use for AUM aggregation — not for volume counts. Use is_sqo_unique or is_joined_unique for volume."
+
+  is_contacted:
+    meaning: "Binary flag (0/1): stage_entered_contacting__c IS NOT NULL. Has been contacted by SGA."
+    type: INTEGER
+
+  is_mql:
+    meaning: "Binary flag (0/1): mql_stage_entered_ts IS NOT NULL. Has scheduled a call (Call Scheduled stage)."
+    type: INTEGER
+
+  is_sql:
+    meaning: "Binary flag (0/1): IsConverted = TRUE AND Full_Opportunity_ID__c IS NOT NULL. Lead converted to opportunity."
+    type: INTEGER
+
+  eligible_for_contacted_conversions:
+    meaning: "Denominator for Contacted-to-MQL cohort conversion. Contacted lead that resolved (became MQL or closed)."
+    type: INTEGER
+
+  eligible_for_contacted_conversions_30d:
+    meaning: "Primary denominator for Contacted-to-MQL. Includes 30-day effective resolution rule for leads without resolution."
+    type: INTEGER
+
+  eligible_for_mql_conversions:
+    meaning: "Denominator for MQL-to-SQL cohort conversion. MQL that resolved (converted or closed)."
+    type: INTEGER
+
+  eligible_for_sql_conversions:
+    meaning: "Denominator for SQL-to-SQO cohort conversion. SQL that resolved (became SQO or closed lost). Opp-only records with SQO also count."
+    type: INTEGER
+
+  eligible_for_sqo_conversions:
+    meaning: "Denominator for SQO-to-Joined cohort conversion. SQO that resolved (joined or closed lost)."
+    type: INTEGER
+
+  contacted_to_mql_progression:
+    meaning: "Numerator for Contacted-to-MQL cohort conversion. Contacted lead that reached MQL."
+    type: INTEGER
+
+  mql_to_sql_progression:
+    meaning: "Numerator for MQL-to-SQL cohort conversion. MQL that converted to SQL."
+    type: INTEGER
+
+  sql_to_sqo_progression:
+    meaning: "Numerator for SQL-to-SQO cohort conversion. SQL that became SQO."
+    type: INTEGER
+
+  sqo_to_joined_progression:
+    meaning: "Numerator for SQO-to-Joined cohort conversion. SQO that joined (excludes Closed Lost)."
+    type: INTEGER
+
+  SQO_raw:
+    meaning: "Raw SQL__c field value from Salesforce. 'Yes' = qualified as SQO."
+    gotcha: "Confusing name — SQL__c in Salesforce means SQO status, not the query language."
+
+  SGA__c:
+    meaning: "User ID of the SGA assigned to the opportunity."
+    gotcha: "This is a User ID, not a boolean or name. Join to the User table to resolve the name."
+
+  SGA_Owner_Name__c:
+    meaning: "COALESCE(Lead.SGA_Owner_Name__c, User lookup of Opp.SGA__c) — the SGA who owns the lead."
+    gotcha: "For activity analysis, this is lead ownership. For actual effort measurement, use task_executor_name instead."
+
+  Finance_View__c:
+    meaning: "COALESCE(Opp.Finance_View__c, Lead.Finance_View__c, 'Other') — canonical channel source."
+    gotcha: "Replaces the deprecated new_mapping table. vw_funnel_master computes Channel_Grouping_Name inline from this field."
+
+  Channel_Grouping_Name:
+    meaning: "Marketing channel grouping derived from Finance_View__c via CASE statement. Values: Partnerships→Recruitment Firm, Job Applications→Marketing, Employee/Advisor Referral→Referral, else passthrough."
+
+  Opportunity_AUM:
+    meaning: "COALESCE(Underwritten_AUM__c, Amount) — best available AUM for the opportunity."
+    gotcha: "Never add Underwritten_AUM__c and Amount. Use COALESCE. Use is_primary_opp_record = 1 for AUM aggregation."
+
+  recordtypeid:
+    meaning: "Opportunity record type. '012Dn000000mrO3IAI' = Recruiting, '012VS000009VoxrYAC' = Re-Engagement, NULL = lead-only rows."
+    gotcha: "Required filter for SQO/Signed/Joined metrics to exclude re-engagement. NOT required for lead-level metrics — lead-level metrics include all record types including re-engagement by design."
+
+  Full_prospect_id__c:
+    meaning: "Salesforce Lead ID. Use this field (not task_who_id) when joining activity data to funnel master."
+    gotcha: "In vw_sga_activity_performance, Full_prospect_id__c is the resolved join key from the dual WhoId/WhatId linkage. Using task_who_id directly misses activities logged against the Opportunity."
+
+  lead_record_source:
+    meaning: "'Lead' or 'Re-Engagement' — how the lead-side record was sourced."
+    gotcha: "Use this to filter re-engagement in/out of lead-level metrics. Simpler than recordtypeid for lead-side filtering. Alias: prospect_source_type."
+
+  prospect_source_type:
+    meaning: "Alias for lead_record_source. 'Lead' or 'Re-Engagement'."
+    use_instead_of: lead_record_source
+    gotcha: "Same field as lead_record_source — both work for filtering re-engagement."
+
+  task_executor_name:
+    meaning: "User.Name joined via Task.OwnerId — the person who performed/logged the activity."
+    gotcha: "Different from SGA_Owner_Name__c. Use task_executor_name for individual effort measurement (OKR). Use SGA_Owner_Name__c for lead-level metrics."
+
+  direction:
+    meaning: "Binary classification of task direction: 'Inbound' or 'Outbound'. Based on Type/Subject pattern matching."
+    gotcha: "No 'System' or 'Unknown' bucket. For SGA effort, combine direction = 'Outbound' with automation exclusion filters."
+
+  activity_channel:
+    meaning: "Detailed activity channel classification (10 values): Marketing, SMS, LinkedIn, Call, Email (Blast), Email (Engagement), Email (Campaign), Email (Manual), Meeting, Other."
+    gotcha: "CASE waterfall — earlier matches win. SMS is checked before Call."
+
+  is_meaningful_connect:
+    meaning: "Binary flag (0/1): A real two-way interaction occurred. Incoming SMS, answered call, or call > 120s."
+    type: INTEGER
+
+  is_true_cold_call:
+    meaning: "Binary flag (0/1): First outbound call to prospect, pre-MQL or re-engagement (180d+ post-close), not on scheduled date, valid linkage, not self-reference."
+    type: INTEGER
+    gotcha: "Strict definition — use for cold call quality analysis."
+
+  cold_call_quality:
+    meaning: "Explains why a call is or isn't classified as a true cold call. Debugging/audit field."
+
+  activity_ramp_status:
+    meaning: "'On Ramp' if within 30 days of executor_created_date, else 'Post-Ramp'."
+
+  is_engagement_tracking:
+    meaning: "Binary flag (0/1): Email open/click tracking events (Subject LIKE '%Clicked on link%'). Not SGA effort."
+    type: INTEGER
+    gotcha: "Exclude these (= 0) when counting SGA outbound effort."
+
+  task_created_date_est:
+    meaning: "DATE(CreatedDate, 'America/New_York') — primary date field for activity queries."
+    type: DATE
+    gotcha: "Use this for date filtering in activity queries, not task_created_date_utc."
+
+  task_id:
+    meaning: "Salesforce Task record ID. Unique identifier per activity."
+    type: STRING
+    gotcha: "Use COUNT(DISTINCT task_id) for activity volume counts."
+
+  task_subject:
+    meaning: "Subject line of the Salesforce Task. Used for classification (lemlist detection, engagement tracking)."
+    type: STRING
+    gotcha: "Filter out '[lemlist]' in subject for true SGA effort. Subject is also used for activity_channel classification."
+
+  task_subtype:
+    meaning: "Salesforce Task subtype (Email, Call, Task, etc.). Used for automation detection."
+    type: STRING
+    gotcha: "Filter out 'ListEmail' subtype for true SGA outbound effort."
+
+  is_cold_call:
+    meaning: "Binary flag (0/1): Outbound call pre-MQL. Less strict than is_true_cold_call."
+    type: INTEGER
+    gotcha: "For strict cold-call analysis, use is_true_cold_call instead."
+
+  executor_created_date:
+    meaning: "The date the task executor (SGA) user record was created. Used to compute ramp status."
+    type: DATE
+
+  p_join:
+    meaning: "Probability of joining — product of stage-to-stage conversion rates from current stage to Joined. Ranges 0.0 to 1.0."
+    type: FLOAT64
+    gotcha: "Based on historical resolved deals (Jun-Dec 2025). Not a live ML score — it's a static lookup by current stage."
+
+  projected_join_date:
+    meaning: "Estimated join date based on median days-in-stage for remaining stages."
+    type: DATE
+
+  projected_quarter:
+    meaning: "Calendar quarter when the opportunity is projected to join, derived from projected_join_date."
+    type: STRING
+    gotcha: "Format is YYYY-QN (e.g. '2026-Q2'). Use for grouping forecast output by quarter."
+
+  expected_aum_weighted:
+    meaning: "Opportunity_AUM * p_join — expected AUM contribution weighted by probability of joining."
+    type: FLOAT64
+    gotcha: "Sum this for pipeline-weighted AUM forecasts. Do not sum raw AUM for forecasting — it overstates."
+
+  days_in_current_stage:
+    meaning: "Number of days the opportunity has been in its current stage."
+    type: INTEGER
+
+  Full_Opportunity_ID__c:
+    meaning: "Salesforce Opportunity ID. Join key between vw_forecast_p2 and vw_funnel_master."
+    type: STRING
+
+rules:
+  - id: sqo_volume_dedup
+    type: prefer_field
+    found: "is_sqo"
+    prefer: "is_sqo_unique"
+    context: "volume counts"
+    severity: error
+    message: "Use is_sqo_unique for SQO volume counts — is_sqo includes duplicates from multi-lead opportunities."
+
+  - id: joined_volume_dedup
+    type: prefer_field
+    found: "is_joined"
+    prefer: "is_joined_unique"
+    context: "volume counts"
+    severity: error
+    message: "Use is_joined_unique for Joined volume counts — is_joined includes duplicates from multi-lead opportunities."
+
+  - id: re_engagement_exclusion
+    type: require_filter
+    when_contains:
+      - "is_sqo"
+      - "is_joined"
+    required: "recordtypeid"
+    severity: warning
+    message: "Add recordtypeid filter to exclude re-engagement opportunities from SQO/Joined metrics."
+
+  - id: no_new_mapping
+    type: ban_pattern
+    pattern: "new_mapping"
+    severity: error
+    message: "Deprecated. Use Channel_Grouping_Name (from Finance_View__c) directly. Do not JOIN new_mapping."
+
+  - id: aum_no_addition
+    type: ban_pattern
+    pattern: "Underwritten_AUM__c + Amount"
+    severity: error
+    message: "Never add Underwritten_AUM__c and Amount — they represent the same value. Use COALESCE(Underwritten_AUM__c, Amount)."
+
+  - id: aum_coalesce_pattern
+    type: prefer_field
+    found: "Amount"
+    prefer: "COALESCE(Underwritten_AUM__c, Amount)"
+    context: "AUM calculations"
+    severity: warning
+    message: "Use COALESCE(Underwritten_AUM__c, Amount) for AUM — Amount alone is a fallback field."
+
+  - id: date_converted_date_raw
+    type: date_type_rule
+    field: "converted_date_raw"
+    expected_type: DATE
+    wrong_wrapper: "TIMESTAMP(converted_date_raw)"
+    correct_wrapper: "DATE(converted_date_raw)"
+    severity: error
+    message: "converted_date_raw is DATE type — use DATE() wrapper, not TIMESTAMP()."
+
+  - id: date_advisor_join_date
+    type: date_type_rule
+    field: "advisor_join_date__c"
+    expected_type: DATE
+    wrong_wrapper: "TIMESTAMP(advisor_join_date__c)"
+    correct_wrapper: "DATE(advisor_join_date__c)"
+    severity: error
+    message: "advisor_join_date__c is DATE type — use DATE() wrapper, not TIMESTAMP()."
+
+  - id: date_filter_date
+    type: date_type_rule
+    field: "FilterDate"
+    expected_type: TIMESTAMP
+    wrong_wrapper: "DATE(FilterDate)"
+    correct_wrapper: "TIMESTAMP(FilterDate)"
+    severity: warning
+    message: "FilterDate is TIMESTAMP type — use TIMESTAMP() wrapper for comparisons. DATE() truncates time."
+
+  - id: date_date_became_sqo
+    type: date_type_rule
+    field: "Date_Became_SQO__c"
+    expected_type: TIMESTAMP
+    wrong_wrapper: "DATE(Date_Became_SQO__c)"
+    correct_wrapper: "TIMESTAMP(Date_Became_SQO__c)"
+    severity: warning
+    message: "Date_Became_SQO__c is TIMESTAMP type — use TIMESTAMP() wrapper for comparisons."
+
+  - id: sga_outbound_automation_filter
+    type: require_filter
+    when_contains:
+      - "direction = 'Outbound'"
+      - "direction = 'outbound'"
+    required: "is_engagement_tracking"
+    severity: warning
+    message: "When counting SGA outbound effort, exclude engagement tracking events (is_engagement_tracking = 0) and automated sends ([lemlist], ListEmail)."
+
+  - id: sga_effort_use_executor
+    type: prefer_field
+    found: "SGA_Owner_Name__c"
+    prefer: "task_executor_name"
+    context: "individual effort measurement"
+    severity: warning
+    message: "For individual SGA effort measurement (OKR), use task_executor_name (who performed the activity), not SGA_Owner_Name__c (who owns the lead)."
+
+  - id: joined_exclude_closed_lost
+    type: ban_pattern
+    pattern: "advisor_join_date__c IS NOT NULL"
+    severity: warning
+    message: "Do not use advisor_join_date__c IS NOT NULL alone for joined counts — Closed Lost advisors can have join dates. Use is_joined or is_joined_unique flags instead."
+
+  - id: activity_funnel_join_key
+    type: prefer_field
+    found: "task_who_id"
+    prefer: "Full_prospect_id__c"
+    context: "joining activity to funnel"
+    severity: error
+    message: "Use Full_prospect_id__c (not task_who_id) to join vw_sga_activity_performance to vw_funnel_master. task_who_id misses activities logged against the Opportunity."
+
+  - id: stage_entered_closed_pre2024
+    type: require_filter
+    when_contains:
+      - "Stage_Entered_Closed__c"
+    required: "2024"
+    severity: info
+    message: "Stage_Entered_Closed__c is only 3.6% populated for 2023. Reliable from 2024 onward (65%+). Consider limiting to post-2024 data."
+
+  - id: contacted_use_flag
+    type: prefer_field
+    found: "stage_entered_contacting__c"
+    prefer: "is_contacted"
+    context: "contacted counts"
+    severity: warning
+    message: "Use is_contacted = 1 for contacted counts, not stage_entered_contacting__c IS NOT NULL alone. The flag confirms the lead was actually contacted."
+
+  - id: dual_sga_attribution
+    type: require_filter
+    when_contains:
+      - "SGA_Owner_Name__c"
+    required: "Opp_SGA_Name__c"
+    severity: warning
+    message: "For opportunity-level SGA attribution (SQOs, Joined, AUM), filter on BOTH SGA_Owner_Name__c and Opp_SGA_Name__c (OR condition). SGA attribution can come from lead or opportunity path."
+
+metrics:
+  contacted_to_mql:
+    description: "Conversion rate from Contacted to MQL (Call Scheduled) stage."
+    modes:
+      cohort:
+        numerator: contacted_to_mql_progression
+        denominator: eligible_for_contacted_conversions_30d
+        anchor_date: stage_entered_contacting__c
+        gotcha: "Uses 30-day effective resolution denominator. Recent cohorts may look low — leads still resolving."
+      period:
+        numerator_logic: "COUNT WHERE mql_stage_entered_ts in period AND is_mql = 1"
+        denominator_logic: "COUNT WHERE stage_entered_contacting__c in period AND is_contacted = 1"
+        numerator: mql_stage_entered_ts
+        denominator: stage_entered_contacting__c
+        gotcha: "Can exceed 100% — numerator and denominator use different date anchors."
+
+  mql_to_sql:
+    description: "Conversion rate from MQL to SQL (Lead conversion to Opportunity)."
+    modes:
+      cohort:
+        numerator: mql_to_sql_progression
+        denominator: eligible_for_mql_conversions
+        anchor_date: mql_stage_entered_ts
+        gotcha: "Recent cohorts look low — MQLs still in flight."
+      period:
+        numerator_logic: "COUNT WHERE converted_date_raw in period AND is_sql = 1"
+        denominator_logic: "COUNT WHERE mql_stage_entered_ts in period AND is_mql = 1"
+        numerator: converted_date_raw
+        denominator: mql_stage_entered_ts
+        gotcha: "Can exceed 100% — different populations."
+
+  sql_to_sqo:
+    description: "Conversion rate from SQL to SQO stage."
+    modes:
+      cohort:
+        numerator: sql_to_sqo_progression
+        denominator: eligible_for_sql_conversions
+        anchor_date: converted_date_raw
+        gotcha: "Recent cohorts look low — deals still in flight. converted_date_raw is DATE type."
+      period:
+        numerator_logic: "COUNT WHERE Date_Became_SQO__c in period AND is_sqo_unique = 1 AND recordtypeid = recruiting"
+        denominator_logic: "COUNT WHERE converted_date_raw in period AND is_sql = 1"
+        numerator: Date_Became_SQO__c
+        denominator: converted_date_raw
+        gotcha: "Can exceed 100%. Period numerator needs recordtypeid filter; denominator does not."
+
+  sqo_to_joined:
+    description: "Conversion rate from SQO to Joined (advisor onboarded)."
+    modes:
+      cohort:
+        numerator: sqo_to_joined_progression
+        denominator: eligible_for_sqo_conversions
+        anchor_date: Date_Became_SQO__c
+        gotcha: "Recent cohorts look low — deals still in pipeline. Long sales cycle (3-6 months)."
+      period:
+        numerator_logic: "COUNT WHERE advisor_join_date__c in period AND is_joined_unique = 1 AND recordtypeid = recruiting"
+        denominator_logic: "COUNT WHERE Date_Became_SQO__c in period AND is_sqo_unique = 1 AND recordtypeid = recruiting"
+        numerator: advisor_join_date__c
+        denominator: Date_Became_SQO__c
+        gotcha: "Can exceed 100%. Both numerator and denominator need recordtypeid filter."

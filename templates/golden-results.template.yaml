@@ -1,0 +1,27 @@
+# Golden Results — Development regression baselines
+# These are NOT business-approved — they are recent query results used for regression detection.
+# Update these when the warehouse legitimately changes.
+#
+# Required fields: id, period, type, expected
+# Optional fields: queried_from, queried_date
+#
+# id:       Unique identifier — convention: <descriptive_id>
+# period:   Human-readable period
+# type:     Fixture type / metric category
+# expected: Key-value pairs of metric names to recent query results
+
+golden: []
+  # Example (e-commerce):
+  # - id: q1_2025_revenue_by_channel
+  #   period: "Q1 2025"
+  #   type: revenue_by_channel
+  #   expected:
+  #     total_revenue: 1250340   # Queried 2025-04-10 from orders_summary
+  #     organic_revenue: 780200
+  #     paid_revenue: 470140
+  #
+  # - id: q1_2025_order_count
+  #   period: "Q1 2025"
+  #   type: order_volume
+  #   expected:
+  #     order_count: 8412        # Queried 2025-04-10 from orders_summary

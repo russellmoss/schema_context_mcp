@@ -1,0 +1,48 @@
+{
+  "name": "@mossrussell/schema-context-mcp",
+  "version": "0.1.0",
+  "description": "MCP server providing AI agents with live, annotated warehouse schema context",
+  "main": "dist/index.js",
+  "bin": {
+    "schema-context-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "eval": "node dist/eval/runner.js"
+  },
+  "files": [
+    "dist/",
+    "templates/",
+    "examples/",
+    "LICENSE",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "bigquery",
+    "schema",
+    "ai-agents"
+  ],
+  "author": "Russell Moss",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@mossrussell/agent-guard": "^0.6.3",
+    "@types/node": "^25.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "council-of-models-mcp": "^2.0.0",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
+  }
+}

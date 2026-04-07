@@ -1,0 +1,41 @@
+# Track C — Workflow Replacement
+# End-to-end workflow tests that simulate real analytical tasks.
+# Requires online mode (--online) — calls live MCP tools.
+# Never auto-generated — requires domain understanding.
+#
+# Required fields: id, request, difficulty, category
+# Required (at least one): required_patterns or knowledge_assertions
+# Optional fields: reference_sql, expected_tool_calls
+#
+# id:                   Unique — convention: <team>-c<N>-<short-description>
+# request:              A realistic multi-step analytical question
+# difficulty:           Always 'advanced' for Track C
+# category:             Your workflow category (e.g., data_analysis, feature_explore, adhoc)
+# required_patterns:    Patterns the generated SQL must contain
+# knowledge_assertions: Knowledge the agent must surface during the workflow
+# reference_sql:        Optional reference SQL (may be partial for workflow tests)
+
+# Example (e-commerce):
+# - id: acme-c1-revenue-investigation
+#   request: "Revenue dropped 15% last week compared to the prior week. Investigate possible causes."
+#   difficulty: advanced
+#   category: data_analysis
+#   required_patterns:
+#     - pattern: "orders_summary"
+#       reason: "Must use the orders summary view"
+#     - pattern: "subtotal_price"
+#       reason: "Must use correct revenue field"
+#   knowledge_assertions:
+#     - question: "What could cause a revenue drop?"
+#       expected: "refund"
+#       tool: describe_view
+#
+# - id: acme-c2-new-metric
+#   request: "Add a metric tracking repeat purchase rate by customer cohort."
+#   difficulty: advanced
+#   category: feature_explore
+#   required_patterns:
+#     - pattern: "customer_id"
+#       reason: "Must identify customers for repeat analysis"
+#     - pattern: "created_at"
+#       reason: "Must use order date for cohort definition"

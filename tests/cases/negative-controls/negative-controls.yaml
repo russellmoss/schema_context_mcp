@@ -1,0 +1,63 @@
+- id: neg-prospect-no-recordtype
+  request: "Count prospects by channel for Q1 2026"
+  difficulty: basic
+  category: volume_metric
+  negative_controls:
+    - description: "Must NOT apply recordtypeid to lead-level metrics"
+      banned_pattern: "recordtypeid"
+      reason: "Lead-level metrics include re-engagement. No recordtypeid filter."
+  reference_sql: |
+    SELECT Channel_Grouping_Name, COUNT(*) AS prospect_count
+    FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+    WHERE TIMESTAMP(v.FilterDate) >= TIMESTAMP('2026-01-01')
+      AND TIMESTAMP(v.FilterDate) < TIMESTAMP('2026-04-01')
+    GROUP BY 1
+
+- id: neg-aum-uses-primary-opp
+  request: "Total AUM for open pipeline"
+  difficulty: basic
+  category: volume_metric
+  required_patterns:
+    - pattern: "is_primary_opp_record"
+      reason: "AUM aggregation must use is_primary_opp_record"
+  reference_sql: |
+    SELECT SUM(CASE WHEN is_primary_opp_record = 1 THEN COALESCE(Underwritten_AUM__c, Amount, 0) END) AS total_aum
+    FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master`
+    WHERE StageName IN ('Qualifying', 'Discovery', 'Sales Process', 'Negotiating')
+      AND recordtypeid = '012Dn000000mrO3IAI' AND is_sqo_unique = 1
+
+- id: neg-effort-uses-executor
+  request: "Calls per SGA per week"
+  difficulty: basic
+  category: activity_metric
+  required_patterns:
+    - pattern: "task_executor_name"
+      reason: "Individual effort uses executor, not lead owner"
+  reference_sql: |
+    SELECT task_executor_name, DATE_TRUNC(task_created_date_est, WEEK) AS week, COUNT(*) AS calls
+    FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance`
+    WHERE activity_channel = 'Call' AND direction = 'Outbound'
+    GROUP BY 1, 2
+
+- id: neg-closedate-legitimate
+  request: "Show me the CloseDate field from the Opportunity table"
+  difficulty: basic
+  category: volume_metric
+  reference_sql: |
+    SELECT CloseDate FROM `savvy-gtm-analytics.SavvyGTMData.Opportunity` LIMIT 10
+
+- id: neg-cohort-no-recordtype
+  request: "SQL-to-SQO conversion rate in cohort mode"
+  difficulty: intermediate
+  category: conversion_rate
+  negative_controls:
+    - description: "Should NOT require recordtypeid — eligibility flags handle it"
+      banned_pattern: "recordtypeid"
+      reason: "Cohort mode eligibility flags handle record types internally"
+  reference_sql: |
+    SELECT
+      SUM(sql_to_sqo_progression) AS numerator,
+      SUM(eligible_for_sql_conversions) AS denominator
+    FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master`
+    WHERE DATE(converted_date_raw) >= DATE('2025-10-01')
+      AND DATE(converted_date_raw) <= DATE('2025-12-31')

@@ -1,0 +1,9 @@
+{
+  "projectName": "schema-context-mcp",
+  "docFiles": ["CLAUDE.md", "README.md", ".claude/mcp-tool-spec.md", ".claude/config-schema.md", ".claude/eval-spec.md"],
+  "sourceGlobs": ["src/**/*.ts"],
+  "hooks": {
+    "pre-commit": true,
+    "ci": true
+  }
+}

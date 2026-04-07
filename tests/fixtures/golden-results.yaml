@@ -1,0 +1,18 @@
+golden:
+  - id: q1_2026_sqo_by_channel
+    period: Q1 2026
+    type: sqo_volume_by_channel
+    expected:
+      total_sqos: 187  # Queried 2026-04-07 from vw_funnel_master
+
+  - id: q1_2026_joined_count
+    period: Q1 2026
+    type: joined_volume
+    expected:
+      joined_count: 12  # Queried 2026-04-07 from vw_funnel_master
+
+  - id: q4_2025_sql_to_sqo_cohort
+    period: Q4 2025
+    type: cohort_conversion_rate
+    expected:
+      sql_to_sqo_rate: 0.648  # Queried 2026-04-07 from vw_funnel_master (cohort mode)

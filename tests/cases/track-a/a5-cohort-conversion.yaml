@@ -1,0 +1,27 @@
+id: sql-to-sqo-cohort
+request: "What's the SQL-to-SQO conversion rate for Q4 2025 cohort?"
+difficulty: intermediate
+category: conversion_rate
+
+required_patterns:
+  - pattern: "sql_to_sqo_progression"
+    rule: cohort_numerator
+  - pattern: "eligible_for_sql_conversions"
+    rule: cohort_denominator
+  - pattern: "converted_date_raw"
+    rule: cohort_anchor_date
+    reason: "Cohort mode anchors on entry date into current stage"
+
+banned_patterns:
+  - pattern: "Date_Became_SQO__c"
+    rule: not_period_mode
+    reason: "Period mode uses next-stage date for numerator — wrong for cohort"
+  - pattern: "COUNTIF"
+    rule: not_period_mode
+    reason: "Cohort mode uses SUM of progression/eligibility flags"
+
+reference_sql: |
+  SELECT
+    SUM(CASE WHEN DATE(v.converted_date_raw) >= DATE('2025-10-01') AND DATE(v.converted_date_raw) <= DATE('2025-12-31') THEN v.sql_to_sqo_progression ELSE 0 END) AS numerator,
+    SUM(CASE WHEN DATE(v.converted_date_raw) >= DATE('2025-10-01') AND DATE(v.converted_date_raw) <= DATE('2025-12-31') THEN v.eligible_for_sql_conversions ELSE 0 END) AS denominator
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v

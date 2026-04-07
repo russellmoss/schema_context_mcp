@@ -1,0 +1,30 @@
+id: open-pipeline-aum
+request: "What's our total open pipeline AUM?"
+difficulty: basic
+category: volume_metric
+
+required_patterns:
+  - pattern: "is_sqo_unique = 1"
+    rule: sqo_filter
+  - pattern: "is_primary_opp_record = 1"
+    rule: aum_dedup
+    reason: "AUM aggregation uses is_primary_opp_record"
+  - pattern: "recordtypeid = '012Dn000000mrO3IAI'"
+    rule: re_engagement_exclusion
+  - pattern: "COALESCE"
+    rule: aum_coalesce
+    reason: "AUM is COALESCE(Underwritten_AUM__c, Amount)"
+
+banned_patterns:
+  - pattern: "Underwritten_AUM__c + Amount"
+    rule: no_aum_addition
+  - pattern: "Closed Lost"
+    rule: open_pipeline_stages
+    reason: "Open pipeline excludes Closed Lost, Joined, On Hold, Signed"
+
+reference_sql: |
+  SELECT SUM(CASE WHEN v.is_primary_opp_record = 1 THEN COALESCE(v.Underwritten_AUM__c, v.Amount, 0) ELSE 0 END) AS total_aum
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  WHERE v.StageName IN ('Qualifying', 'Discovery', 'Sales Process', 'Negotiating')
+    AND v.recordtypeid = '012Dn000000mrO3IAI'
+    AND v.is_sqo_unique = 1

@@ -1,0 +1,39 @@
+id: count-sqos-by-channel
+request: "Count SQOs by channel for Q1 2026"
+difficulty: basic
+category: volume_metric
+
+required_patterns:
+  - pattern: "is_sqo_unique = 1"
+    rule: sqo_volume_dedup
+    reason: "Must use dedup flag for volume counts"
+  - pattern: "recordtypeid = '012Dn000000mrO3IAI'"
+    rule: re_engagement_exclusion
+    reason: "Must exclude re-engagement at opp level"
+  - pattern: "Channel_Grouping_Name"
+    rule: canonical_channel
+    reason: "Must use canonical channel field"
+  - pattern: "TIMESTAMP"
+    rule: date_type_safety
+    reason: "Date_Became_SQO__c is TIMESTAMP"
+
+banned_patterns:
+  - pattern: "is_sqo = 1"
+    without: "is_sqo_unique"
+    rule: sqo_volume_dedup
+  - pattern: "new_mapping"
+    rule: no_new_mapping
+  - pattern: "CloseDate"
+    rule: use_stage_entered_closed
+
+expected_tool_calls:
+  - describe_view: { view: vw_funnel_master, intent: count_sqos }
+
+reference_sql: |
+  SELECT v.Channel_Grouping_Name,
+    COUNT(CASE WHEN v.is_sqo_unique = 1 THEN 1 END) AS sqo_count
+  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  WHERE v.recordtypeid = '012Dn000000mrO3IAI'
+    AND TIMESTAMP(v.Date_Became_SQO__c) >= TIMESTAMP('2026-01-01')
+    AND TIMESTAMP(v.Date_Became_SQO__c) <= TIMESTAMP('2026-03-31 23:59:59')
+  GROUP BY 1 ORDER BY 2 DESC

@@ -1,0 +1,260 @@
+- id: kb-sqo-dedup-flag
+  request: "What flag should I use to count SQOs?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What flag should I use to count SQOs?"
+      expected: "is_sqo_unique"
+      tool: describe_view
+
+- id: kb-prospect-no-recordtype
+  request: "Do I need a recordtypeid filter for counting prospects?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "Do I need a recordtypeid filter for counting prospects?"
+      expected: "lead-level metrics include"
+      tool: get_rule
+
+- id: kb-canonical-channel
+  request: "What's the canonical channel field?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What's the canonical channel field?"
+      expected: "Finance_View__c"
+      tool: resolve_term
+
+- id: kb-cohort-vs-period
+  request: "What's the difference between cohort and period mode?"
+  difficulty: intermediate
+  category: conversion_rate
+  knowledge_assertions:
+    - question: "What's the difference between cohort and period mode?"
+      expected: "cohort"
+      tool: get_metric
+
+- id: kb-aum-no-addition
+  request: "Can I add Underwritten_AUM__c and Amount?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "Can I add Underwritten_AUM__c and Amount?"
+      expected: "COALESCE"
+      tool: get_rule
+
+- id: kb-converted-date-type
+  request: "Is converted_date_raw a DATE or TIMESTAMP?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "Is converted_date_raw a DATE or TIMESTAMP?"
+      expected: "DATE"
+      tool: describe_view
+
+- id: kb-filterdate
+  request: "What is FilterDate?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What is FilterDate?"
+      expected: "COALESCE"
+      tool: describe_view
+
+- id: kb-primary-opp-vs-sqo-unique
+  request: "What's the difference between is_primary_opp_record and is_sqo_unique?"
+  difficulty: intermediate
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What's the difference between is_primary_opp_record and is_sqo_unique?"
+      expected: "AUM"
+      tool: describe_view
+
+- id: kb-eligible-sql-conversions
+  request: "What does eligible_for_sql_conversions mean?"
+  difficulty: intermediate
+  category: conversion_rate
+  knowledge_assertions:
+    - question: "What does eligible_for_sql_conversions mean?"
+      expected: "resolved"
+      tool: describe_view
+
+- id: kb-join-key-activity
+  request: "Should I use task_who_id or Full_prospect_id__c to join activities to leads?"
+  difficulty: intermediate
+  category: activity_metric
+  knowledge_assertions:
+    - question: "Should I use task_who_id or Full_prospect_id__c?"
+      expected: "Full_prospect_id__c"
+      tool: describe_view
+
+- id: kb-sga-effort-field
+  request: "For SGA effort measurement, should I group by task_executor_name or SGA_Owner_Name__c?"
+  difficulty: intermediate
+  category: activity_metric
+  knowledge_assertions:
+    - question: "For SGA effort measurement, which field?"
+      expected: "task_executor_name"
+      tool: get_rule
+
+- id: kb-automation-filters
+  request: "What filters exclude automated outbound activity?"
+  difficulty: basic
+  category: activity_metric
+  knowledge_assertions:
+    - question: "What filters exclude automated outbound?"
+      expected: "is_engagement_tracking"
+      tool: get_rule
+
+- id: kb-cold-call-difference
+  request: "What's the difference between is_cold_call and is_true_cold_call?"
+  difficulty: intermediate
+  category: activity_metric
+  knowledge_assertions:
+    - question: "What's the difference between cold call flags?"
+      expected: "is_true_cold_call"
+      tool: describe_view
+
+- id: kb-sga-c-field
+  request: "What is SGA__c on the Opportunity object?"
+  difficulty: basic
+  category: attribution
+  knowledge_assertions:
+    - question: "What is SGA__c?"
+      expected: "User ID"
+      tool: resolve_term
+
+- id: kb-ofh-staleness
+  request: "How stale can OpportunityFieldHistory be?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "How stale can OpportunityFieldHistory be?"
+      expected: "weekly"
+      tool: describe_view
+
+- id: kb-finance-view-precedence
+  request: "Does Finance_View__c come from Lead or Opportunity?"
+  difficulty: intermediate
+  category: attribution
+  knowledge_assertions:
+    - question: "Does Finance_View__c come from Lead or Opportunity?"
+      expected: "COALESCE"
+      tool: describe_view
+
+- id: kb-marketing-segment-vs-lead-score
+  request: "Is Marketing_Segment__c the same as Lead_Score_Tier__c?"
+  difficulty: basic
+  category: attribution
+  knowledge_assertions:
+    - question: "Is Marketing_Segment__c the same as Lead_Score_Tier__c?"
+      expected: "different"
+      tool: resolve_term
+
+- id: kb-funnel-source-of-truth
+  request: "What is the single source of truth for funnel metrics?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What is the source of truth for funnel metrics?"
+      expected: "vw_funnel_master"
+      tool: describe_view
+
+- id: kb-forecast-view
+  request: "Which view should I use for pipeline forecasting?"
+  difficulty: basic
+  category: forecast
+  knowledge_assertions:
+    - question: "Which view for pipeline forecasting?"
+      expected: "vw_forecast_p2"
+      tool: list_views
+
+- id: kb-new-mapping-deprecated
+  request: "Is new_mapping still used?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "Is new_mapping still used?"
+      expected: "deprecated"
+      tool: get_rule
+
+- id: kb-filterdate-type
+  request: "Is FilterDate a DATE or TIMESTAMP?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "Is FilterDate a DATE or TIMESTAMP?"
+      expected: "TIMESTAMP"
+      tool: describe_view
+
+- id: kb-lemlist-filter
+  request: "Should I filter out lemlist emails for SGA effort?"
+  difficulty: basic
+  category: activity_metric
+  knowledge_assertions:
+    - question: "Should I filter lemlist?"
+      expected: "lemlist"
+      tool: get_rule
+
+- id: kb-channel-term
+  request: "What does 'channel' mean in this data?"
+  difficulty: basic
+  category: attribution
+  knowledge_assertions:
+    - question: "What does channel mean?"
+      expected: "Finance_View__c"
+      tool: resolve_term
+
+- id: kb-joined-advisor-term
+  request: "What is a joined advisor?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What is a joined advisor?"
+      expected: "is_joined_unique"
+      tool: resolve_term
+
+- id: kb-open-pipeline-term
+  request: "What is open pipeline?"
+  difficulty: basic
+  category: forecast
+  knowledge_assertions:
+    - question: "What is open pipeline?"
+      expected: "vw_forecast_p2"
+      tool: resolve_term
+
+- id: kb-pipeline-term
+  request: "What does pipeline mean?"
+  difficulty: basic
+  category: volume_metric
+  knowledge_assertions:
+    - question: "What does pipeline mean?"
+      expected: "StageName"
+      tool: resolve_term
+
+- id: kb-activity-join-key
+  request: "How do I join activity data to funnel data?"
+  difficulty: intermediate
+  category: activity_metric
+  knowledge_assertions:
+    - question: "How to join activity to funnel?"
+      expected: "Full_prospect_id__c"
+      tool: describe_view
+
+- id: kb-forecast-probability
+  request: "What is p_join in the forecast view?"
+  difficulty: intermediate
+  category: forecast
+  knowledge_assertions:
+    - question: "What is p_join?"
+      expected: "probability"
+      tool: describe_view
+
+- id: kb-expected-aum
+  request: "How do I get probability-weighted AUM from the forecast?"
+  difficulty: intermediate
+  category: forecast
+  knowledge_assertions:
+    - question: "What field for weighted AUM?"
+      expected: "expected_aum_weighted"
+      tool: describe_view
