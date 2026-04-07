@@ -133,7 +133,7 @@ COALESCE(l.Lead_FilterDate, o.Opp_CreatedDate, o.Date_Became_SQO__c, TIMESTAMP(o
 | Field | Type | Description |
 |-------|------|-------------|
 | `Opportunity_AUM` | FLOAT64 | `COALESCE(Underwritten_AUM__c, Amount)` — best available AUM. **Never add these two fields.** |
-| `Underwritten_AUM__c` | FLOAT64 | Savvy's underwritten AUM estimate (preferred) |
+| `Underwritten_AUM__c` | FLOAT64 | Underwritten AUM estimate (preferred) |
 | `Amount` | FLOAT64 | Salesforce standard Amount field (fallback) |
 | `Opportunity_AUM_M` | FLOAT64 | `Opportunity_AUM / 1,000,000` rounded to 2 decimals |
 | `aum_tier` | STRING | Tier 1 (<$25M), Tier 2 ($25M-$75M), Tier 3 ($75M-$150M), Tier 4 (>$150M) |

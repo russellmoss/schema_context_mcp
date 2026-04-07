@@ -24,7 +24,7 @@ banned_patterns:
 
 reference_sql: |
   SELECT SUM(CASE WHEN v.is_primary_opp_record = 1 THEN COALESCE(v.Underwritten_AUM__c, v.Amount, 0) ELSE 0 END) AS total_aum
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  FROM `your-gcp-project.Tableau_Views.vw_funnel_master` v
   WHERE v.StageName IN ('Qualifying', 'Discovery', 'Sales Process', 'Negotiating')
     AND v.recordtypeid = '012Dn000000mrO3IAI'
     AND v.is_sqo_unique = 1

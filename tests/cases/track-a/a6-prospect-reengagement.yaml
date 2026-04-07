@@ -20,6 +20,6 @@ banned_patterns:
 
 reference_sql: |
   SELECT COUNT(*) AS prospect_count
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  FROM `your-gcp-project.Tableau_Views.vw_funnel_master` v
   WHERE TIMESTAMP(v.FilterDate) >= TIMESTAMP('2026-03-01')
     AND TIMESTAMP(v.FilterDate) < TIMESTAMP('2026-04-01')

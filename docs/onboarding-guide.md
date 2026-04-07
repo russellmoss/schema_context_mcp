@@ -229,7 +229,7 @@ The `--human-signoff`, `--real-task`, and `--config-in-git` flags document that 
 
 ## Reference Example
 
-See [`examples/savvy-wealth.yaml`](../examples/savvy-wealth.yaml) for a production-scale config from a real BigQuery + RevOps environment. This example has 9 views, 40+ fields, 14 rules, 12 terms, and 4 metrics.
+See [`examples/config.yaml`](../examples/config.yaml) for a production-scale config from a real BigQuery + RevOps environment. This example has 9 views, 40+ fields, 14 rules, 12 terms, and 4 metrics.
 
 ---
 

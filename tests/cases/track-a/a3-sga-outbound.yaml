@@ -26,7 +26,7 @@ banned_patterns:
 
 reference_sql: |
   SELECT act.task_executor_name, COUNT(DISTINCT act.task_id) AS outbound_touchpoints
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+  FROM `your-gcp-project.Tableau_Views.vw_sga_activity_performance` act
   WHERE act.direction = 'Outbound'
     AND act.is_engagement_tracking = 0
     AND COALESCE(act.task_subject, '') NOT LIKE '%[lemlist]%'

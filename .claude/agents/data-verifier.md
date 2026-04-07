@@ -17,7 +17,7 @@ If the project has a `config/schema-config.yaml`, read it to understand what ann
 
 ## Rules
 - You have MCP access to BigQuery. USE IT to run queries and inspect schema.
-- The primary analytics views are in `savvy-gtm-analytics.Tableau_Views`.
+- The primary analytics views are in `your-gcp-project.Tableau_Views`.
 - Always use parameterized queries — never string interpolation.
 - Your job is to verify that the MCP config accurately represents the live warehouse.
 

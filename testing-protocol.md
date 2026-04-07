@@ -1,4 +1,4 @@
-# Savvy Wealth — schema-context-mcp Validation Protocol
+# schema-context-mcp Validation Protocol
 
 **Purpose**: Validate that the MCP fully replaces the five `.claude/bq-*.md` files as the primary context source for all agentic workflows in the Dashboard project. Not just SQL generation — feature planning, data analysis, exploration, and review.
 
@@ -185,7 +185,7 @@ expected_tool_calls:
 reference_sql: |
   SELECT v.Channel_Grouping_Name,
     COUNT(CASE WHEN v.is_sqo_unique = 1 THEN 1 END) AS sqo_count
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  FROM `your-gcp-project.Tableau_Views.vw_funnel_master` v
   WHERE v.recordtypeid = '012Dn000000mrO3IAI'
     AND TIMESTAMP(v.Date_Became_SQO__c) >= TIMESTAMP('2026-01-01')
     AND TIMESTAMP(v.Date_Became_SQO__c) <= TIMESTAMP('2026-03-31 23:59:59')

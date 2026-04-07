@@ -23,7 +23,7 @@ metrics:       # Optional — metric definitions
 ```yaml
 connection:
   connector: bigquery          # Required. v1: "bigquery" only
-  project: savvy-gtm-analytics # Required. GCP project ID
+  project: your-gcp-project    # Required. GCP project ID
   datasets:                    # Required. List of datasets to scan
     - Tableau_Views
   key_file: ./path/to/sa.json  # Optional. Falls back to GOOGLE_APPLICATION_CREDENTIALS env var

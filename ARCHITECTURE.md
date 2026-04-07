@@ -136,7 +136,7 @@ schema-context-mcp/
 |   +-- eval-cases/               # Track A/B/C and negative control templates
 |
 +-- examples/
-|   +-- savvy-wealth.yaml         # Production-scale reference config
+|   +-- config.yaml               # Production-scale reference config
 |
 +-- config/
 |   +-- schema-config.yaml        # The config: connection, views, fields, rules, terms, metrics
@@ -155,7 +155,7 @@ schema-context-mcp/
 |   +-- implementation-guide-v1.md    # 13-phase build plan (executed)
 |   +-- phase-status.md               # Phase completion tracker
 |   +-- bootstrap-coverage-checklist.md
-|   +-- bootstrap/savvy/              # Source-of-truth docs (5 files)
+|   +-- bootstrap/example/             # Source-of-truth docs (5 files)
 |
 +-- .claude/
 |   +-- mcp-tool-spec.md          # Canonical response shapes for all 7 tools
@@ -581,7 +581,7 @@ Exit code 1 on any failure (for CI integration).
 The bootstrap command generates an initial config draft from existing static markdown documentation.
 
 ```bash
-node dist/index.js bootstrap --docs docs/bootstrap/savvy --output /tmp/draft-config.yaml
+node dist/index.js bootstrap --docs docs/bootstrap/example --output /tmp/draft-config.yaml
 ```
 
 This is extraction, not inference. Every generated annotation has `confidence: low` by default. The output is a draft for human review, not a production-ready config.

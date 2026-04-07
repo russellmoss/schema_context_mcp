@@ -25,7 +25,7 @@ reference_sql: |
   SELECT task_executor_name,
     DATE_TRUNC(task_created_date_est, WEEK) AS week,
     COUNT(CASE WHEN is_true_cold_call = 1 THEN 1 END) AS true_cold_calls
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance`
+  FROM `your-gcp-project.Tableau_Views.vw_sga_activity_performance`
   WHERE direction = 'Outbound'
     AND task_created_date_est >= DATE('2026-01-01')
     AND task_created_date_est < DATE('2026-04-01')

@@ -19,7 +19,7 @@
 
 6. **Closed Lost advisors with join dates must be excluded from "joined" counts**. An advisor who joined then left has `advisor_join_date__c IS NOT NULL` AND `StageName = 'Closed Lost'`. The view handles this: `is_joined` and `is_joined_unique` both check `StageName != 'Closed Lost'`.
 
-7. **Always use `Finance_View__c` for channel grouping. The `new_mapping` JOIN pattern is DEPRECATED.** `Finance_View__c` (from Salesforce) is the canonical source of truth. The view computes `Channel_Grouping_Name` inline from it. Some legacy query files (`drill-down.ts`, `record-detail.ts`, `quarterly-progress.ts`) still JOIN to `SavvyGTMData.new_mapping` — these are pending migration. **Do not propagate this pattern to new queries.** `Cohort_source` is a source-level field, not a channel field.
+7. **Always use `Finance_View__c` for channel grouping. The `new_mapping` JOIN pattern is DEPRECATED.** `Finance_View__c` (from Salesforce) is the canonical source of truth. The view computes `Channel_Grouping_Name` inline from it. Some legacy query files (`drill-down.ts`, `record-detail.ts`, `quarterly-progress.ts`) still JOIN to `CRMData.new_mapping` — these are pending migration. **Do not propagate this pattern to new queries.** `Cohort_source` is a source-level field, not a channel field.
 
 8. **Re-engagement records ARE in lead-level metrics.** Prospects, Contacted, MQLs, and SQLs include re-engagement records. They are only excluded from SQO/Signed/Joined by the `recordtypeid` filter. To exclude re-engagement from lead-level counts, filter: `lead_record_source = 'Lead'`. To query re-engagement only: `lead_record_source = 'Re-Engagement'`.
 
@@ -97,7 +97,7 @@ END AS Channel_Grouping_Name
 
 Some query files still JOIN to `new_mapping` table:
 ```sql
-LEFT JOIN `savvy-gtm-analytics.SavvyGTMData.new_mapping` nm
+LEFT JOIN `your-gcp-project.CRMData.new_mapping` nm
   ON v.Original_source = nm.original_source
 -- Then use:
 COALESCE(nm.Channel_Grouping_Name, v.Channel_Grouping_Name, 'Other')
@@ -180,7 +180,7 @@ COALESCE(v.Underwritten_AUM__c, v.Amount, 0) -- for sums
 COALESCE(v.Underwritten_AUM__c, v.Amount)     -- for display (NULL if both NULL)
 ```
 
-- `Underwritten_AUM__c`: Savvy's underwritten estimate (more accurate, filled later in process)
+- `Underwritten_AUM__c`: Underwritten estimate (more accurate, filled later in process)
 - `Amount`: Salesforce standard field (filled earlier, sometimes stale)
 - **Never add them** — they represent the same value
 
@@ -298,7 +298,7 @@ The Monte Carlo forecast uses 2-tier AUM bands (Lower <$75M, Upper >=$75M) with 
 
 `forecast-pipeline.ts` queries `OpportunityFieldHistory` to reconstruct point-in-time (PIT) state:
 ```sql
-FROM `savvy-gtm-analytics.SavvyGTMData.OpportunityFieldHistory` h
+FROM `your-gcp-project.CRMData.OpportunityFieldHistory` h
 ```
 Used to determine what the pipeline looked like at a prior date, enabling "surprise" detection (deals that appeared or disappeared unexpectedly). **Note**: `OpportunityFieldHistory` is synced weekly (not every 6 hours like core objects), so PIT reconstruction can be up to 7 days stale.
 

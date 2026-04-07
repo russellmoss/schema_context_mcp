@@ -9,8 +9,8 @@
 
 | Table/View | Dataset | Purpose |
 |---|---|---|
-| `SavvyGTMData.Task` | Raw Salesforce Task records | Every logged activity (call, SMS, email, LinkedIn, etc.) |
-| `SavvyGTMData.User` | User table | Joined to get executor name, IsSGA__c, IsActive |
+| `CRMData.Task` | Raw Salesforce Task records | Every logged activity (call, SMS, email, LinkedIn, etc.) |
+| `CRMData.User` | User table | Joined to get executor name, IsSGA__c, IsActive |
 | `Tableau_Views.vw_funnel_master` | Lead/Opp funnel | Joined to get prospect context, SGA assignment, funnel flags |
 | **`Tableau_Views.vw_sga_activity_performance`** | **The activity view** | Enriched, deduplicated tasks with channel/direction classification |
 
@@ -147,7 +147,7 @@ Two levels of granularity:
 | `SMS` | `Type LIKE '%SMS%' OR Subject LIKE '%SMS%' OR Subject LIKE '%Text%'` |
 | `LinkedIn` | `Subject LIKE '%LinkedIn%' OR TaskSubtype = 'LinkedIn' OR Subject LIKE '%LI %'` |
 | `Call` | `Type = 'Call' OR TaskSubtype = 'Call' OR Subject LIKE '%Call%/%answered%/%Left VM%/%Voicemail%' OR Subject LIKE 'missed:%'` |
-| `Email (Blast)` | `Subject LIKE 'Sent Savvy raised%'` |
+| `Email (Blast)` | `Subject LIKE 'Sent fundraise%'` |
 | `Email (Engagement)` | `Subject LIKE '%Clicked on link%'` — tracking events, NOT SGA effort |
 | `Email (Campaign)` | `Subject LIKE '%[lemlist]%' OR TaskSubtype = 'ListEmail'` |
 | `Email (Manual)` | `Type = 'Email' OR TaskSubtype = 'Email' OR Subject LIKE 'Email:%' OR Subject LIKE 'Sent %'` |
@@ -237,7 +237,7 @@ Validated in Q1 2026: **3.8% of outbound activities** (3,488 of 91,174) have `ta
 | Field | Type | Logic | Description |
 |---|---|---|---|
 | `is_meaningful_connect` | INT64 | Incoming SMS = 1, Subject LIKE '%answered%' (not missed) = 1, CallDuration > 120s = 1 | A real two-way interaction occurred |
-| `is_marketing_activity` | INT64 | `Subject LIKE 'Submitted Form%' OR executor_name = 'Savvy Marketing'` | Marketing-sourced, not SGA effort |
+| `is_marketing_activity` | INT64 | `Subject LIKE 'Submitted Form%' OR executor_name = 'Marketing'` | Marketing-sourced, not SGA effort |
 | `is_cold_call` | INT64 | Outbound call, not on scheduled call date | Any unscheduled outbound call |
 | `is_true_cold_call` | INT64 | First outbound call to prospect, pre-MQL or re-engagement (180d+ post-close), not on scheduled date, valid linkage, not self-reference | Strict cold call definition |
 | `call_type` | STRING | `'Cold Call'`, `'Scheduled Call'`, `'Inbound Call'`, or `'Not a Call'` | Call classification |
@@ -276,7 +276,7 @@ Breakdown:
 SELECT
   act.Full_prospect_id__c AS lead_id,
   COUNT(DISTINCT act.task_id) AS outbound_touchpoints
-FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+FROM `your-gcp-project.Tableau_Views.vw_sga_activity_performance` act
 WHERE act.direction = 'Outbound'
   AND act.is_engagement_tracking = 0
   AND COALESCE(act.task_subject, '') NOT LIKE '%[lemlist]%'
@@ -291,7 +291,7 @@ GROUP BY 1
 
 ```sql
 SELECT DISTINCT act.Full_prospect_id__c AS lead_id
-FROM `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+FROM `your-gcp-project.Tableau_Views.vw_sga_activity_performance` act
 WHERE act.direction = 'Inbound'
   AND COALESCE(act.activity_channel_group, '') NOT IN ('Marketing', '')
   AND act.Full_prospect_id__c IS NOT NULL

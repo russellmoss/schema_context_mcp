@@ -125,7 +125,7 @@ schema-context-mcp v1 is a Node.js/TypeScript MCP server that replaces five stat
 
 ## 2. Bootstrap Coverage Map
 
-The five Savvy Wealth docs map into MCP coverage as follows:
+The five source docs map into MCP coverage as follows:
 
 During Phase 1, generate docs/bootstrap-coverage-checklist.md from the coverage map above. This file tracks which source doc sections have been migrated to config, which are pending, and which are intentionally deferred. Update it at the end of each phase.
 
@@ -375,8 +375,8 @@ Create src/config/validator.ts with the validation logic, separate from I/O.
 Create config/schema-config.yaml with just:
   connection:
     connector: bigquery
-    project: savvy-gtm-analytics
-    datasets: [Tableau_Views, SavvyGTMData, savvy_analytics]
+    project: your-gcp-project
+    datasets: [Tableau_Views, CRMData, analytics]
 
 CRITICAL CONSTRAINTS:
 - Do NOT add runtime defaults for missing annotations (no "inferred" annotations at load time)
@@ -838,7 +838,7 @@ npm run lint
 
 ---
 
-### Phase 11a: Savvy Wealth Config Bootstrap — Views + Terms
+### Phase 11a: Reference Config Bootstrap — Views + Terms
 
 **Goal:** Generate the `views` and `terms` sections first, using only the source docs relevant to those sections.
 
@@ -849,7 +849,7 @@ npm run lint
 
 ```
 Read ONLY these files first:
-- docs/bootstrap/savvy/bq-views.md
+- docs/bootstrap/example/bq-views.md
 - README.md (config schema reference)
 - .claude/config-schema.md (authoritative YAML shape)
 
@@ -874,14 +874,14 @@ CRITICAL CONSTRAINTS:
 npm run build
 # Validate config loads without errors:
 # node -e "const m = await import('./dist/config/loader.js'); const c = m.loadConfig('./config/schema-config.yaml'); console.log('Views:', Object.keys(c.views || {}).length, 'Terms:', Object.keys(c.terms || {}).length)"
-# Spot-check 2-3 generated view/term entries against docs/bootstrap/savvy/bq-views.md
+# Spot-check 2-3 generated view/term entries against docs/bootstrap/example/bq-views.md
 ```
 
 **Stop condition:** At least 7 views and 10 terms are present, the config still validates, and 2-3 spot-checks match the source doc.
 
 ---
 
-### Phase 11b: Savvy Wealth Config Bootstrap — Fields
+### Phase 11b: Reference Config Bootstrap — Fields
 
 **Goal:** Generate the `fields` section only, using the field- and activity-specific docs.
 
@@ -892,8 +892,8 @@ npm run build
 
 ```
 Read ONLY these files first:
-- docs/bootstrap/savvy/bq-field-dictionary.md
-- docs/bootstrap/savvy/bq-activity-layer.md
+- docs/bootstrap/example/bq-field-dictionary.md
+- docs/bootstrap/example/bq-activity-layer.md
 - README.md (config schema reference)
 - .claude/config-schema.md (authoritative YAML shape)
 
@@ -925,7 +925,7 @@ npm run build
 
 ---
 
-### Phase 11c: Savvy Wealth Config Bootstrap — Rules
+### Phase 11c: Reference Config Bootstrap — Rules
 
 **Goal:** Generate the `rules` section only, using the rules/patterns docs.
 
@@ -936,8 +936,8 @@ npm run build
 
 ```
 Read ONLY these files first:
-- docs/bootstrap/savvy/bq-patterns.md
-- docs/bootstrap/savvy/bq-activity-layer.md
+- docs/bootstrap/example/bq-patterns.md
+- docs/bootstrap/example/bq-activity-layer.md
 - README.md (config schema reference)
 - .claude/config-schema.md (authoritative YAML shape)
 
@@ -969,7 +969,7 @@ npm run build
 
 ---
 
-### Phase 11d: Savvy Wealth Config Bootstrap — Metrics
+### Phase 11d: Reference Config Bootstrap — Metrics
 
 **Goal:** Generate the `metrics` section only, using the metric-specific parts of the docs.
 
@@ -980,8 +980,8 @@ npm run build
 
 ```
 Read ONLY these files first:
-- docs/bootstrap/savvy/bq-patterns.md (cohort vs period section)
-- docs/bootstrap/savvy/bq-field-dictionary.md (eligibility/progression flags)
+- docs/bootstrap/example/bq-patterns.md (cohort vs period section)
+- docs/bootstrap/example/bq-field-dictionary.md (eligibility/progression flags)
 - README.md (config schema reference)
 - .claude/config-schema.md (authoritative YAML shape)
 
@@ -1012,7 +1012,7 @@ npm run build
 
 ---
 
-### Phase 11e: Savvy Wealth Config Bootstrap — Review + Normalize
+### Phase 11e: Reference Config Bootstrap — Review + Normalize
 
 **Goal:** Review the complete generated config against all bootstrap docs, normalize gaps, and tag the reviewed bootstrap artifact.
 
@@ -1027,11 +1027,11 @@ npm run build
 ```
 Read the complete generated config/schema-config.yaml.
 Then cross-reference it against ALL five source docs:
-- docs/bootstrap/savvy/bq-views.md
-- docs/bootstrap/savvy/bq-field-dictionary.md
-- docs/bootstrap/savvy/bq-patterns.md
-- docs/bootstrap/savvy/bq-activity-layer.md
-- docs/bootstrap/savvy/bq-salesforce-mapping.md
+- docs/bootstrap/example/bq-views.md
+- docs/bootstrap/example/bq-field-dictionary.md
+- docs/bootstrap/example/bq-patterns.md
+- docs/bootstrap/example/bq-activity-layer.md
+- docs/bootstrap/example/bq-salesforce-mapping.md
 
 Check for:
 - missing rules
@@ -1227,7 +1227,7 @@ CRITICAL CONSTRAINTS:
 ```bash
 npm run build
 # Test bootstrap:
-# node dist/index.js bootstrap --docs docs/bootstrap/savvy --output /tmp/test-config.yaml
+# node dist/index.js bootstrap --docs docs/bootstrap/example --output /tmp/test-config.yaml
 # Validate output loads:
 # node -e "const m = await import('./dist/config/loader.js'); m.loadConfig('/tmp/test-config.yaml')"
 ```
@@ -1592,7 +1592,7 @@ Before moving from guide to phased implementation:
 
 - [ ] `npm run build` compiles clean (type foundation exists from Phase 1 types)
 - [ ] BigQuery credentials available (service account JSON or ADC configured)
-- [ ] Bootstrap docs confirmed present at `docs/bootstrap/savvy/bq-*.md`
+- [ ] Bootstrap docs confirmed present at `docs/bootstrap/example/bq-*.md`
 - [ ] README.md reviewed and understood by the person executing the guide
 - [ ] testing-protocol.md reviewed and understood
 - [ ] CLAUDE.md reviewed for anti-patterns and conventions

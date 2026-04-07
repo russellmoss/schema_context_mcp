@@ -10,11 +10,11 @@
 ```
 Salesforce (source of truth)
     │
-    ├─── BQ Data Transfer Service (every 6 hours) ───→ SavvyGTMData.*
+    ├─── BQ Data Transfer Service (every 6 hours) ───→ CRMData.*
     │         Lead, Opportunity, Contact, Account, Task,
     │         Campaign, CampaignMember, User
     │
-    ├─── BQ Data Transfer Service (WEEKLY, separate job) ───→ SavvyGTMData.OpportunityFieldHistory
+    ├─── BQ Data Transfer Service (WEEKLY, separate job) ───→ CRMData.OpportunityFieldHistory
     │         Point-in-time reconstruction for Pipeline Forecast
     │
     ├─── Hightouch (outbound, daily, 3 syncs) ←───── FinTrx_data_CA.advisor_segments
@@ -38,7 +38,7 @@ BigQuery (analytics layer)
     ├─── Tableau_Views.vw_joined_advisor_location ──→ Advisor Map
     │         Joins vw_funnel_master + Opportunity + Contact + Account + FinTrx + geocoded_addresses
     │
-    └─── savvy_analytics.* ──→ Tableau dashboards, Reporting Agents
+    └─── analytics.* ──→ Tableau dashboards, Reporting Agents
               48 views (most not consumed by Next.js dashboard)
 ```
 
@@ -48,15 +48,15 @@ BigQuery (analytics layer)
 
 | SF Object | BQ Table | Dataset | Sync Cadence | Approx Columns | Key Fields Used by Dashboard |
 |-----------|----------|---------|--------------|----------------|------------------------------|
-| Lead | `Lead` | SavvyGTMData | Every 6 hours | 143 | Id, Name, ConvertedOpportunityId, ConvertedDate, IsConverted, SGA_Owner_Name__c, Final_Source__c, Finance_View__c, stage_entered_contacting__c, Stage_Entered_Call_Scheduled__c, FA_CRD__c, Campaign__c, Experimentation_Tag__c, Lead_Score_Tier__c, External_Agency__c, Initial_Call_Scheduled_Date__c, Stage_Entered_Closed__c, Disposition__c, DoNotCall, Next_Steps__c |
-| Opportunity | `Opportunity` | SavvyGTMData | Every 6 hours | 170+ | Id, Name, RecordTypeId, StageName, Amount, Underwritten_AUM__c, SGA__c (User ID), Opportunity_Owner_Name__c, SQL__c, Date_Became_SQO__c, advisor_join_date__c, Final_Source__c, Finance_View__c, FA_CRD__c, Stage_Entered_*__c (7 fields), Earliest_Anticipated_Start_Date__c, Closed_Lost_Reason__c, Closed_Lost_Details__c, Actual_ARR__c, SGM_Estimated_ARR__c, CampaignId, Experimentation_Tag__c, External_Agency__c, ContactId, AccountId, Previous_Recruiting_Opportunity_ID__c, Created_Recruiting_Opportunity_ID__c |
-| Account | `Account` | SavvyGTMData | Every 6 hours | ~50 | Id, Account_Total_ARR__c, BillingStreet/City/State/PostalCode/Country/Lat/Long, Account_Total_AUM__c |
-| Contact | `Contact` | SavvyGTMData | Every 6 hours | ~60 | Id, MailingStreet/City/State/PostalCode/Country/Lat/Long |
-| Task | `Task` | SavvyGTMData | Every 6 hours | ~30 | Id, CreatedDate, Subject, Type, TaskSubtype, CallDurationInSeconds, WhoId (Lead), WhatId (Opp), OwnerId, Status, IsDeleted |
-| User | `User` | SavvyGTMData | Every 6 hours | ~30 | Id, Name, IsSGA__c, IsActive, CreatedDate |
-| Campaign | `Campaign` | SavvyGTMData | Every 6 hours | ~20 | Id, Name, IsDeleted |
-| CampaignMember | `CampaignMember` | SavvyGTMData | Every 6 hours | ~15 | LeadId, ContactId, CampaignId, IsDeleted |
-| OpportunityFieldHistory | `OpportunityFieldHistory` | SavvyGTMData | **Weekly** (separate job) | ~10 | OpportunityId, Field, OldValue, NewValue, CreatedDate |
+| Lead | `Lead` | CRMData | Every 6 hours | 143 | Id, Name, ConvertedOpportunityId, ConvertedDate, IsConverted, SGA_Owner_Name__c, Final_Source__c, Finance_View__c, stage_entered_contacting__c, Stage_Entered_Call_Scheduled__c, FA_CRD__c, Campaign__c, Experimentation_Tag__c, Lead_Score_Tier__c, External_Agency__c, Initial_Call_Scheduled_Date__c, Stage_Entered_Closed__c, Disposition__c, DoNotCall, Next_Steps__c |
+| Opportunity | `Opportunity` | CRMData | Every 6 hours | 170+ | Id, Name, RecordTypeId, StageName, Amount, Underwritten_AUM__c, SGA__c (User ID), Opportunity_Owner_Name__c, SQL__c, Date_Became_SQO__c, advisor_join_date__c, Final_Source__c, Finance_View__c, FA_CRD__c, Stage_Entered_*__c (7 fields), Earliest_Anticipated_Start_Date__c, Closed_Lost_Reason__c, Closed_Lost_Details__c, Actual_ARR__c, SGM_Estimated_ARR__c, CampaignId, Experimentation_Tag__c, External_Agency__c, ContactId, AccountId, Previous_Recruiting_Opportunity_ID__c, Created_Recruiting_Opportunity_ID__c |
+| Account | `Account` | CRMData | Every 6 hours | ~50 | Id, Account_Total_ARR__c, BillingStreet/City/State/PostalCode/Country/Lat/Long, Account_Total_AUM__c |
+| Contact | `Contact` | CRMData | Every 6 hours | ~60 | Id, MailingStreet/City/State/PostalCode/Country/Lat/Long |
+| Task | `Task` | CRMData | Every 6 hours | ~30 | Id, CreatedDate, Subject, Type, TaskSubtype, CallDurationInSeconds, WhoId (Lead), WhatId (Opp), OwnerId, Status, IsDeleted |
+| User | `User` | CRMData | Every 6 hours | ~30 | Id, Name, IsSGA__c, IsActive, CreatedDate |
+| Campaign | `Campaign` | CRMData | Every 6 hours | ~20 | Id, Name, IsDeleted |
+| CampaignMember | `CampaignMember` | CRMData | Every 6 hours | ~15 | LeadId, ContactId, CampaignId, IsDeleted |
+| OpportunityFieldHistory | `OpportunityFieldHistory` | CRMData | **Weekly** (separate job) | ~10 | OpportunityId, Field, OldValue, NewValue, CreatedDate |
 
 **Important**: `OpportunityFieldHistory` is on a **separate weekly** Data Transfer Service job, NOT part of the 6-hour cycle. This means PIT reconstruction data for the Pipeline Forecast can be up to 7 days stale. All other core objects above are synced every 6 hours with maximum 6-hour staleness.
 
@@ -66,27 +66,27 @@ BigQuery (analytics layer)
 
 | Dashboard Label | SF Field | SF Object | BQ Raw Table | BQ View Field | Transformation |
 |----------------|----------|-----------|-------------|---------------|----------------|
-| SGA Name | `SGA_Owner_Name__c` | Lead | `SavvyGTMData.Lead` | `SGA_Owner_Name__c` | Passthrough on Lead; COALESCE with User lookup of `Opp.SGA__c` for final |
-| SGM Name | `Opportunity_Owner_Name__c` | Opportunity | `SavvyGTMData.Opportunity` | `SGM_Owner_Name__c` | Renamed in view from `Opp_SGM_Name` |
-| Opp SGA | `SGA__c` | Opportunity | `SavvyGTMData.Opportunity` | `Opp_SGA_Name__c` | This is a **User ID** in SF. View joins to `User` table to get name as `Opp_SGA_User_Name`. |
+| SGA Name | `SGA_Owner_Name__c` | Lead | `CRMData.Lead` | `SGA_Owner_Name__c` | Passthrough on Lead; COALESCE with User lookup of `Opp.SGA__c` for final |
+| SGM Name | `Opportunity_Owner_Name__c` | Opportunity | `CRMData.Opportunity` | `SGM_Owner_Name__c` | Renamed in view from `Opp_SGM_Name` |
+| Opp SGA | `SGA__c` | Opportunity | `CRMData.Opportunity` | `Opp_SGA_Name__c` | This is a **User ID** in SF. View joins to `User` table to get name as `Opp_SGA_User_Name`. |
 | Original Source | `Final_Source__c` | Lead + Opportunity | Both | `Original_source` | `COALESCE(Opp.Final_Source__c, Lead.Final_Source__c, 'Unknown')` |
 | Finance View | `Finance_View__c` | Lead + Opportunity | Both | `Finance_View__c` | `COALESCE(Opp.Finance_View__c, Lead.Finance_View__c, 'Other')` — **canonical channel source** |
 | Channel | `Finance_View__c` | Lead + Opportunity | Both | `Channel_Grouping_Name` | CASE mapping: Partnerships→Recruitment Firm, Job Apps→Marketing, Employee/Advisor Referral→Referral, else passthrough |
 | FA CRD | `FA_CRD__c` | Lead + Opportunity | Both | Not in vw_funnel_master | Used in `vw_lost_to_competition` and `vw_joined_advisor_location` for FinTrx matching |
-| SQL Date | `ConvertedDate` | Lead | `SavvyGTMData.Lead` | `converted_date_raw` | Passthrough (type stays DATE) |
-| SQO Date | `Date_Became_SQO__c` | Opportunity | `SavvyGTMData.Opportunity` | `Date_Became_SQO__c` | Passthrough (TIMESTAMP) |
-| Join Date | `Advisor_Join_Date__c` | Opportunity | `SavvyGTMData.Opportunity` | `advisor_join_date__c` | Passthrough (DATE) |
-| SQO Status | `SQL__c` | Opportunity | `SavvyGTMData.Opportunity` | `SQO_raw`, `is_sqo`, `is_sqo_unique` | `SQL__c = 'Yes'` → `is_sqo = 1`. **Confusing name**: `SQL__c` actually means SQO status. |
-| Actual ARR | `Actual_ARR__c` | Opportunity | `SavvyGTMData.Opportunity` | `Actual_ARR__c` | Passthrough. Post-join only. |
-| Account ARR | `Account_Total_ARR__c` | Account | `SavvyGTMData.Account` | `Account_Total_ARR__c` | Joined via `Opportunity.AccountId = Account.Id` |
-| SGM Est ARR | `SGM_Estimated_ARR__c` | Opportunity | `SavvyGTMData.Opportunity` | `SGM_Estimated_ARR__c` | Passthrough. Pre-join estimate. |
-| Pipeline AUM | `Underwritten_AUM__c` / `Amount` | Opportunity | `SavvyGTMData.Opportunity` | `Opportunity_AUM` | `COALESCE(Underwritten_AUM__c, Amount)` — never add, always COALESCE |
-| Record Type | `RecordTypeId` | Opportunity | `SavvyGTMData.Opportunity` | `recordtypeid` | Passthrough. Only Recruiting opps (`012Dn000000mrO3IAI`) join from `Opp_Base`. |
-| Stage | `StageName` | Opportunity | `SavvyGTMData.Opportunity` | `StageName` | `COALESCE(Opp.StageName, Lead.lead_StageName)` |
-| Contacted Date | `Stage_Entered_Contacting__c` | Lead | `SavvyGTMData.Lead` | `stage_entered_contacting__c` | Passthrough (TIMESTAMP) |
-| MQL Date | `Stage_Entered_Call_Scheduled__c` | Lead | `SavvyGTMData.Lead` | `mql_stage_entered_ts` | Renamed in view |
-| Lead Score Tier | `Lead_Score_Tier__c` | Lead | `SavvyGTMData.Lead` | `Lead_Score_Tier__c` | Passthrough. V4 XGBoost output (Career Clock, Prime Movers, etc.) |
-| Marketing Segment | `Marketing_Segment__c` | Lead, Contact, Opp | `SavvyGTMData.Lead` etc. | **Not in vw_funnel_master** | Written by Hightouch from FinTrx `advisor_segments`. Firm-type classification — NOT lead scoring. |
+| SQL Date | `ConvertedDate` | Lead | `CRMData.Lead` | `converted_date_raw` | Passthrough (type stays DATE) |
+| SQO Date | `Date_Became_SQO__c` | Opportunity | `CRMData.Opportunity` | `Date_Became_SQO__c` | Passthrough (TIMESTAMP) |
+| Join Date | `Advisor_Join_Date__c` | Opportunity | `CRMData.Opportunity` | `advisor_join_date__c` | Passthrough (DATE) |
+| SQO Status | `SQL__c` | Opportunity | `CRMData.Opportunity` | `SQO_raw`, `is_sqo`, `is_sqo_unique` | `SQL__c = 'Yes'` → `is_sqo = 1`. **Confusing name**: `SQL__c` actually means SQO status. |
+| Actual ARR | `Actual_ARR__c` | Opportunity | `CRMData.Opportunity` | `Actual_ARR__c` | Passthrough. Post-join only. |
+| Account ARR | `Account_Total_ARR__c` | Account | `CRMData.Account` | `Account_Total_ARR__c` | Joined via `Opportunity.AccountId = Account.Id` |
+| SGM Est ARR | `SGM_Estimated_ARR__c` | Opportunity | `CRMData.Opportunity` | `SGM_Estimated_ARR__c` | Passthrough. Pre-join estimate. |
+| Pipeline AUM | `Underwritten_AUM__c` / `Amount` | Opportunity | `CRMData.Opportunity` | `Opportunity_AUM` | `COALESCE(Underwritten_AUM__c, Amount)` — never add, always COALESCE |
+| Record Type | `RecordTypeId` | Opportunity | `CRMData.Opportunity` | `recordtypeid` | Passthrough. Only Recruiting opps (`012Dn000000mrO3IAI`) join from `Opp_Base`. |
+| Stage | `StageName` | Opportunity | `CRMData.Opportunity` | `StageName` | `COALESCE(Opp.StageName, Lead.lead_StageName)` |
+| Contacted Date | `Stage_Entered_Contacting__c` | Lead | `CRMData.Lead` | `stage_entered_contacting__c` | Passthrough (TIMESTAMP) |
+| MQL Date | `Stage_Entered_Call_Scheduled__c` | Lead | `CRMData.Lead` | `mql_stage_entered_ts` | Renamed in view |
+| Lead Score Tier | `Lead_Score_Tier__c` | Lead | `CRMData.Lead` | `Lead_Score_Tier__c` | Passthrough. V4 XGBoost output (Career Clock, Prime Movers, etc.) |
+| Marketing Segment | `Marketing_Segment__c` | Lead, Contact, Opp | `CRMData.Lead` etc. | **Not in vw_funnel_master** | Written by Hightouch from FinTrx `advisor_segments`. Firm-type classification — NOT lead scoring. |
 
 ---
 
@@ -125,7 +125,7 @@ This allows re-engagement records to flow through the same funnel logic as regul
 - **Impact**: PIT reconstruction and surprise detection can lag by up to a week
 
 ### Data Freshness Monitoring
-- `data-freshness.ts` checks `SavvyGTMData.__TABLES__` metadata for last modified timestamps
+- `data-freshness.ts` checks `CRMData.__TABLES__` metadata for last modified timestamps
 - Surfaces staleness indicators to the dashboard
 
 ### Hightouch Outbound Sync
@@ -188,7 +188,7 @@ Note: The join direction differs — `vw_lost_to_competition` casts FinTrx to ST
 
 ## Known Gotchas
 
-1. **`SGA__c` on Opportunity is a User ID, not a name**. The view joins to `User` table to get the actual name. If you query `SavvyGTMData.Opportunity` directly, `SGA__c` returns a 15/18-char Salesforce ID.
+1. **`SGA__c` on Opportunity is a User ID, not a name**. The view joins to `User` table to get the actual name. If you query `CRMData.Opportunity` directly, `SGA__c` returns a 15/18-char Salesforce ID.
 
 2. **`SQL__c` means SQO status**. Legacy naming. `SQL__c = 'Yes'` means the opportunity has been qualified as an SQO.
 
@@ -200,7 +200,7 @@ Note: The join direction differs — `vw_lost_to_competition` casts FinTrx to ST
 
 6. **`advisor_join_date__c` can exist on Closed Lost records**. An advisor who joined then left retains the join date but gets `StageName = 'Closed Lost'`. The view's `is_joined` flag correctly excludes these.
 
-7. **BQ Data Transfer has 6-hour lag for core objects, 7-day lag for OpportunityFieldHistory**. The `data-freshness.ts` query checks `SavvyGTMData.__TABLES__` for last modified timestamps. PIT reconstruction (surprise baseline) is the most stale data in the dashboard.
+7. **BQ Data Transfer has 6-hour lag for core objects, 7-day lag for OpportunityFieldHistory**. The `data-freshness.ts` query checks `CRMData.__TABLES__` for last modified timestamps. PIT reconstruction (surprise baseline) is the most stale data in the dashboard.
 
 8. **`Stage_Entered_Closed__c` has low population for older records**. Only 3.6% populated for 2023 records, 65.4% for 2024, 74.5% for 2025. Don't rely on it for pre-2024 analysis.
 

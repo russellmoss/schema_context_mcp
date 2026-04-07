@@ -13,7 +13,7 @@ src/
 
 config/                # User-facing config files (schema-config.yaml)
 tests/                 # Test cases and examples
-examples/              # Example configs (savvy-wealth.yaml)
+examples/              # Example configs (config.yaml)
 
 ## Key Files
 - src/index.ts — MCP server setup, tool registration

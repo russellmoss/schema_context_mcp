@@ -1,19 +1,19 @@
-# Savvy Wealth — Production Reference Example
+# Production Reference Example
 #
 # This is a real, production-scale schema-context-mcp config from a BigQuery + RevOps environment.
 # It demonstrates: 9 views, 50+ fields, 17 rules, 16 terms, and 4 metrics.
 # Use this as a reference for what a fully populated config looks like.
 #
-# DO NOT use this config directly — it references Savvy-specific datasets and fields.
+# DO NOT use this config directly — it references environment-specific datasets and fields.
 # Instead, use templates/schema-config.template.yaml as your starting point.
 
 connection:
   connector: bigquery
-  project: savvy-gtm-analytics
+  project: your-gcp-project
   datasets:
     - Tableau_Views
-    - SavvyGTMData
-    - savvy_analytics
+    - CRMData
+    - analytics
 
 views:
   vw_funnel_master:
@@ -57,7 +57,7 @@ views:
       joined_date: "advisor_join_date__c (DATE)"
       entry_date: "FilterDate (TIMESTAMP)"
       closed_date: "Stage_Entered_Closed__c (TIMESTAMP)"
-    freshness_notes: "Depends on SavvyGTMData tables: Lead/Opportunity sync every 6 hours, OpportunityFieldHistory syncs weekly, FinTrx refreshes monthly."
+    freshness_notes: "Depends on CRM tables: Lead/Opportunity sync every 6 hours, OpportunityFieldHistory syncs weekly, FinTrx refreshes monthly."
     notes: "Re-engagement records (recordtypeid = '012VS000009VoxrYAC') are UNION ALL'd into the lead side via ReEngagement_As_Lead CTE and DO affect lead-level metrics. To join activity data from vw_sga_activity_performance, use Full_prospect_id__c as the join key."
 
   vw_forecast_p2:
@@ -102,7 +102,7 @@ views:
     freshness_notes: "Address data depends on Contact/Account sync (6h) and FinTrx monthly refresh. Geocoded coordinates updated by cron job."
 
   vw_lost_to_competition:
-    purpose: "Matches closed-lost SQOs to FinTrx regulatory data to determine which firm the advisor moved to after declining Savvy. Uses CRD (Central Registration Depository) number matching."
+    purpose: "Matches closed-lost SQOs to FinTrx regulatory data to determine which firm the advisor moved to after declining. Uses CRD (Central Registration Depository) number matching."
     grain: "One row per closed-lost opportunity with a CRD match"
     consumers:
       - "src/lib/reporting/context.ts"
@@ -219,7 +219,7 @@ terms:
     gotcha: "vw_funnel_master now computes Channel_Grouping_Name inline from Finance_View__c via a CASE statement. Do NOT use new_mapping."
 
   Joined:
-    definition: "An advisor who has completed the onboarding process and is actively on the Savvy platform."
+    definition: "An advisor who has completed the onboarding process and is actively on the platform."
     related_fields:
       - is_joined_unique
       - advisor_join_date__c
@@ -241,7 +241,7 @@ terms:
     gotcha: "Do not use new_mapping (deprecated). Finance_View__c is the canonical source. Channel_Grouping_Name groups Finance_View__c values into Recruitment Firm, Marketing, Referral, etc."
 
   joined_advisor:
-    definition: "An advisor who has completed onboarding and is actively on the Savvy platform. Identified by is_joined_unique = 1 in vw_funnel_master or presence in vw_joined_advisor_location."
+    definition: "An advisor who has completed onboarding and is actively on the platform. Identified by is_joined_unique = 1 in vw_funnel_master or presence in vw_joined_advisor_location."
     related_fields:
       - is_joined_unique
       - is_joined

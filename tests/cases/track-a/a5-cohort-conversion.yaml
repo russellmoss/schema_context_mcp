@@ -24,4 +24,4 @@ reference_sql: |
   SELECT
     SUM(CASE WHEN DATE(v.converted_date_raw) >= DATE('2025-10-01') AND DATE(v.converted_date_raw) <= DATE('2025-12-31') THEN v.sql_to_sqo_progression ELSE 0 END) AS numerator,
     SUM(CASE WHEN DATE(v.converted_date_raw) >= DATE('2025-10-01') AND DATE(v.converted_date_raw) <= DATE('2025-12-31') THEN v.eligible_for_sql_conversions ELSE 0 END) AS denominator
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_funnel_master` v
+  FROM `your-gcp-project.Tableau_Views.vw_funnel_master` v

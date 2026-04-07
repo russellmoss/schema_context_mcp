@@ -249,7 +249,7 @@ terms:
   AUM: "Assets Under Management"
 ```
 
-That's it. A production-scale example lives in [`examples/savvy-wealth.yaml`](examples/savvy-wealth.yaml).
+A production-scale example lives in [`examples/config.yaml`](examples/config.yaml).
 
 ### v1 rule types
 

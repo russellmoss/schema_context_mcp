@@ -2,7 +2,7 @@
 
 > **Status:** Implementation-ready guide. No code changes yet.
 > **Scope:** Build the reusable system that lets any team adopt `schema-context-mcp` on their own warehouse, business logic, docs, and metrics.
-> **Prerequisite:** The MCP server (7 tools, config system, eval framework, merger, connector) is already built and proven working for one environment (Savvy Wealth / BigQuery / RevOps).
+> **Prerequisite:** The MCP server (7 tools, config system, eval framework, merger, connector) is already built and proven working for the reference environment (BigQuery / RevOps).
 
 ---
 
@@ -22,7 +22,7 @@ The MCP server itself is fully generic — no domain-specific code in any tool i
 - Iterating on failures until promotion criteria are met
 - Human review at defined gates
 
-Today this process was done manually for Savvy across 25 phases. The goal is to reduce a new team's onboarding from weeks of hand-crafting to a structured, partially-automated workflow.
+Today this process was done manually for the reference environment across 25 phases. The goal is to reduce a new team's onboarding from weeks of hand-crafting to a structured, partially-automated workflow.
 
 ### What it is NOT
 
@@ -154,7 +154,7 @@ The workflow has 8 stages that execute in order. Some stages loop (marked with a
 
 | File | Purpose |
 |---|---|
-| `templates/schema-config.template.yaml` | Blank config with all sections, inline comments, generic examples (e-commerce domain, not Savvy) |
+| `templates/schema-config.template.yaml` | Blank config with all sections, inline comments, generic examples (e-commerce domain, not environment-specific) |
 | `templates/true-north.template.yaml` | Blank true-north fixture with structure + instructions |
 | `templates/golden-results.template.yaml` | Blank golden fixture with structure + instructions |
 | `templates/eval-cases/track-a.template.yaml` | Track A case template with all fields documented |
@@ -167,8 +167,8 @@ The workflow has 8 stages that execute in order. Some stages loop (marked with a
 | `docs/template-contract-checklist.md` | Frozen contract: required fields, types, and shapes for every template YAML artifact |
 | `docs/fixture-contract-checklist.md` | Frozen contract: required fields, types, and shapes for true-north and golden-results fixtures |
 | `docs/bootstrap-doc-format.md` | Spec for markdown patterns the extractor understands |
-| `docs/onboarding-guide.md` | Step-by-step guide for new teams (references templates, not Savvy) |
-| `examples/savvy-wealth.yaml` | Production-scale example config (the existing Savvy config, documented as reference) |
+| `docs/onboarding-guide.md` | Step-by-step guide for new teams (references templates, not environment-specific) |
+| `examples/config.yaml` | Production-scale example config (documented as reference) |
 
 **Contract freeze requirement:** `docs/template-contract-checklist.md` and `docs/fixture-contract-checklist.md` must be created and reviewed before any subsequent phase begins. These documents define the expected YAML shapes, required vs optional fields, field types, and validation rules for:
 
@@ -189,10 +189,10 @@ and all files in tests/cases/. Then read src/bootstrap/extract.ts to understand 
 patterns the extractor expects.
 
 Create all template files listed in Phase 0 of docs/onboarding-loop-implementation-guide.md.
-Templates must use a generic e-commerce domain (orders, customers, products) — not Savvy terminology.
+Templates must use a generic e-commerce domain (orders, customers, products) — not environment-specific terminology.
 Each template must have inline YAML comments explaining every field and when it's required vs optional.
 
-Also create examples/savvy-wealth.yaml as a copy of config/schema-config.yaml with a header comment
+Also create examples/config.yaml as a copy of config/schema-config.yaml with a header comment
 explaining it's a production reference example.
 
 Do not modify any existing source files.
@@ -204,7 +204,7 @@ Do not modify any existing source files.
 - `docs/bootstrap-doc-format.md` documents all 3 extraction patterns from `extract.ts`
 - `docs/template-contract-checklist.md` defines required/optional fields for every template
 - `docs/fixture-contract-checklist.md` defines required/optional fields for every fixture type
-- `examples/savvy-wealth.yaml` loads without error: `node -e "const y = require('yaml'); const fs = require('fs'); y.parse(fs.readFileSync('examples/savvy-wealth.yaml','utf8'))"`
+- `examples/config.yaml` loads without error: `node -e "const y = require('yaml'); const fs = require('fs'); y.parse(fs.readFileSync('examples/config.yaml','utf8'))"`
 - Contract checklists are reviewed and frozen before Phase 1 begins
 
 **Stop condition:** All files created, all YAML parseable, contracts frozen, no source code modified.
@@ -290,7 +290,7 @@ src/bootstrap/emit-config.ts.
 - `npm run build` clean
 - `npm run lint` clean
 - Bootstrap with `--project test --dataset ds1` produces config with correct connection section
-- Bootstrap on Savvy docs produces same extraction results as before (no regression)
+- Bootstrap on existing reference docs produces same extraction results as before (no regression)
 - Bootstrap on empty directory produces coverage report showing 0 extractions + helpful message
 - Terms extraction works on a test doc with `**SQO**: Sales Qualified Opportunity`
 
@@ -613,7 +613,7 @@ docs/onboarding-loop-implementation-guide.md.
 **Validation:**
 - `npm run build` clean
 - `npm run lint` clean
-- `promote` on the existing Savvy config produces a report showing L2
+- `promote` on the existing reference config produces a report showing L2
 - `promote` on a minimal config (connection only) produces a report showing L0
 - Report includes all sections: level, evals, health, coverage, fixtures, gaps
 
@@ -630,7 +630,7 @@ docs/onboarding-loop-implementation-guide.md.
 | File | Change |
 |---|---|
 | `docs/onboarding-guide.md` | Update with final CLI commands and flow |
-| `README.md` | Add onboarding section, fix broken references (examples/savvy-wealth.yaml, tests/examples/) |
+| `README.md` | Add onboarding section, fix broken references (examples/config.yaml, tests/examples/) |
 | `ARCHITECTURE.md` | Add onboarding system architecture section |
 | `docs/onboarding-loop-implementation-guide.md` | Mark phases complete in status table |
 
@@ -646,7 +646,7 @@ docs/onboarding-loop-implementation-guide.md.
 
 3. Update README.md:
    - Add "Onboarding a New Team" section
-   - Fix examples/savvy-wealth.yaml reference
+   - Fix examples/config.yaml reference
    - Fix tests/examples/ reference
    - Add CLI subcommand documentation (bootstrap, onboard, refine, promote)
 
@@ -937,7 +937,7 @@ templates/
     └── negative-controls.template.yaml
 
 examples/
-└── savvy-wealth.yaml                    # Production reference example
+└── config.yaml                          # Production reference example
 
 docs/
 ├── onboarding-guide.md                  # Step-by-step for new teams
@@ -985,7 +985,7 @@ Before this guide is considered ready to implement:
 - [ ] Phase ordering validated (no dependency violations)
 - [ ] Automation boundaries approved by project owner
 - [ ] Degraded adoption paths cover realistic scenarios
-- [ ] Template designs reviewed (generic domain, no Savvy leakage)
+- [ ] Template designs reviewed (generic domain, no environment-specific leakage)
 - [ ] Promotion criteria agreed upon by stakeholders
 - [ ] Existing eval suite confirmed passing (no regressions from guide creation)
 - [ ] Phase 0 identified as first implementation phase
@@ -998,7 +998,7 @@ After all phases are implemented, the following must be verified before the onbo
 - [ ] Templates generate valid starter artifacts that pass YAML parsing and contract validation
 - [ ] Refine loop proposals can be reviewed, approved, and applied without corrupting existing config
 - [ ] Promotion reporting produces correct results on both minimal configs (connection only → L0) and fully populated configs (full annotations → L2+)
-- [ ] The loop remains functional after the repo is cleaned and generalized for npm publication (no Savvy-specific paths, credentials, or hardcoded references remain in the onboarding/refinement/promotion code)
+- [ ] The loop remains functional after the repo is cleaned and generalized for npm publication (no environment-specific paths, credentials, or hardcoded references remain in the onboarding/refinement/promotion code)
 
 ---
 
@@ -1014,9 +1014,9 @@ After all phases are implemented, the following must be verified before the onbo
 **Risk:** The offline eval uses substring matching on reference SQL and `JSON.stringify(config)`. This can produce false positives (pattern found in wrong context) and false negatives (correct knowledge present but serialized differently).
 **Mitigation:** Phase 4 adds online eval mode with live tool calls. The offline eval becomes a fast pre-check; online eval is the authoritative gate for promotion.
 
-### Risk 3: External Teams Won't Resemble Savvy
+### Risk 3: External Teams Won't Resemble the Reference Environment
 
-**Risk:** Savvy had clean docs, clear business ownership, well-defined metrics, and BigQuery expertise. Other teams may have poor docs, no business approver, ambiguous metrics, and limited SQL skills.
+**Risk:** The reference environment had clean docs, clear business ownership, well-defined metrics, and BigQuery expertise. Other teams may have poor docs, no business approver, ambiguous metrics, and limited SQL skills.
 **Mitigation:** Degraded adoption paths (Section 2) and the L0→L1→L2→L3 promotion model allow teams to start with minimal investment and harden incrementally. The system never blocks on missing optional inputs.
 
 ### Risk 4: Scope Creep in Refinement Loop
@@ -1038,6 +1038,6 @@ After all phases are implemented, the following must be verified before the onbo
 Rationale:
 1. Zero code changes — pure artifact creation. Lowest risk, highest leverage.
 2. Every subsequent phase references these templates. They're a hard dependency.
-3. Forces the team to define the generic domain (not Savvy) upfront, which validates that the system is truly generic.
+3. Forces the team to define the generic domain upfront, which validates that the system is truly generic.
 4. The onboarding guide becomes the user-facing contract that all tooling must satisfy.
 5. Can be reviewed and iterated on before any code is written.

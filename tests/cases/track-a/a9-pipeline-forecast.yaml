@@ -24,6 +24,6 @@ reference_sql: |
     COUNT(*) AS deals,
     SUM(expected_aum_weighted) AS expected_aum,
     AVG(p_join) AS avg_probability
-  FROM `savvy-gtm-analytics.Tableau_Views.vw_forecast_p2`
+  FROM `your-gcp-project.Tableau_Views.vw_forecast_p2`
   GROUP BY projected_quarter
   ORDER BY projected_quarter

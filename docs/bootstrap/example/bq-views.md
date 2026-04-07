@@ -8,7 +8,7 @@
 ## Dataset: Tableau_Views (Primary Dashboard Views)
 
 ### View: vw_funnel_master
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
+- **Dataset**: `your-gcp-project.Tableau_Views`
 - **Purpose**: Single source of truth combining Lead + Opportunity data for the entire recruiting funnel. All funnel metrics, conversion rates, and drill-downs derive from this view.
 - **Consumers**:
   - `src/lib/queries/funnel-metrics.ts` — volume metrics (Prospects, Contacted, MQL, SQL, SQO, Joined)
@@ -32,14 +32,14 @@
   - `src/lib/queries/closed-lost.ts` — closed-lost analysis
   - `src/lib/queries/re-engagement.ts` — re-engagement funnel
   - `src/lib/semantic-layer/` — Explore AI agent queries
-- **Key Dependencies**: `SavvyGTMData.Lead`, `SavvyGTMData.Opportunity`, `SavvyGTMData.Account`, `SavvyGTMData.Campaign`, `SavvyGTMData.CampaignMember`, `SavvyGTMData.User`
+- **Key Dependencies**: `CRMData.Lead`, `CRMData.Opportunity`, `CRMData.Account`, `CRMData.Campaign`, `CRMData.CampaignMember`, `CRMData.User`
 - **Key Fields**: `FilterDate` (funnel entry timestamp), `is_sqo_unique`, `is_joined_unique`, `is_primary_opp_record`, `eligible_for_*_conversions`, `*_progression` flags, `Channel_Grouping_Name`, `recordtypeid`, `lead_record_source`
 - **Field Count**: 88 columns
 - **Last Modified**: 2026-03-22 (added ARR fields for SGM Hub)
 - **Re-Engagement**: Re-engagement records (`012VS000009VoxrYAC`) are UNION ALL'd into the lead side via `ReEngagement_As_Lead` CTE and DO affect lead-level metrics. See bq-patterns.md for filtering rules.
 
 ### View: vw_forecast_p2
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
+- **Dataset**: `your-gcp-project.Tableau_Views`
 - **Purpose**: Deterministic expected-value pipeline forecast. Computes P(Join), projected join dates, and expected AUM for each open SQO based on historical stage-to-stage conversion rates from resolved deals (Jun-Dec 2025).
 - **Consumers**:
   - `src/lib/queries/forecast-pipeline.ts` — forecast pipeline page
@@ -50,7 +50,7 @@
 - **Field Count**: 25 columns
 
 ### View: vw_funnel_audit
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
+- **Dataset**: `your-gcp-project.Tableau_Views`
 - **Purpose**: Audit trail for opportunity stage progression — tracks days in each stage, stage velocities, skipped stages, and conversion numerators/denominators. Used alongside vw_forecast_p2 for deal-level detail.
 - **Consumers**:
   - `src/lib/queries/forecast-export.ts` — joined to forecast data for audit columns
@@ -60,7 +60,7 @@
 - **Field Count**: 51 columns
 
 ### View: vw_daily_forecast
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views` (also in `savvy_analytics`)
+- **Dataset**: `your-gcp-project.Tableau_Views` (also in `analytics`)
 - **Purpose**: Daily-ized forecast goals broken down by source/channel. Each row = one day with daily target counts for prospects, MQLs, SQLs, SQOs, and Joined.
 - **Consumers**:
   - `src/lib/queries/forecast-goals.ts` — goal progress bars on dashboard
@@ -71,44 +71,44 @@
 - **Field Count**: 9 columns
 
 ### View: vw_joined_advisor_location
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
+- **Dataset**: `your-gcp-project.Tableau_Views`
 - **Purpose**: One row per joined advisor with best-available address for map visualization. Coalesces addresses from Contact, FinTrx regulatory data, and Account records. Includes geocoded lat/long.
 - **Consumers**:
   - `src/lib/queries/advisor-locations.ts` — advisor map page
   - `src/app/api/cron/geocode-advisors/route.ts` — cron job for geocoding
-- **Key Dependencies**: `vw_funnel_master`, `SavvyGTMData.Opportunity`, `SavvyGTMData.Contact`, `SavvyGTMData.Account`, `FinTrx_data_CA.ria_contacts_current`, `Tableau_Views.geocoded_addresses` (table)
+- **Key Dependencies**: `vw_funnel_master`, `CRMData.Opportunity`, `CRMData.Contact`, `CRMData.Account`, `FinTrx_data_CA.ria_contacts_current`, `Tableau_Views.geocoded_addresses` (table)
 - **Key Fields**: `address_lat`, `address_long`, `address_source`, `coord_source`, `has_full_address`, `address_state` (normalized)
 - **Field Count**: 29 columns
 
 ### View: vw_lost_to_competition
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
-- **Purpose**: Matches closed-lost SQOs to FinTrx regulatory data to determine which firm the advisor moved to after declining Savvy. Uses CRD (Central Registration Depository) number matching.
+- **Dataset**: `your-gcp-project.Tableau_Views`
+- **Purpose**: Matches closed-lost SQOs to FinTrx regulatory data to determine which firm the advisor moved to after declining the offer. Uses CRD (Central Registration Depository) number matching.
 - **Consumers**:
   - `src/lib/reporting/context.ts` — competitive-intel and analyze-wins reporting agents
   - `src/lib/reporting/tools.ts` — reporting tool queries
   - NOT consumed by any direct dashboard page — reporting agents only
-- **Key Dependencies**: `SavvyGTMData.Opportunity` (direct, not via vw_funnel_master), `FinTrx_data_CA.ria_contacts_current`
+- **Key Dependencies**: `CRMData.Opportunity` (direct, not via vw_funnel_master), `FinTrx_data_CA.ria_contacts_current`
 - **Key Fields**: `moved_to_firm`, `months_to_move`, `closed_lost_reason`, `crd`, `sfdc_url`
 - **Field Count**: 12 columns
 
 ### View: vw_sga_activity_performance
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views` (also in `savvy_analytics`)
+- **Dataset**: `your-gcp-project.Tableau_Views` (also in `analytics`)
 - **Purpose**: Joins Salesforce Task records to vw_funnel_master to categorize SGA activities (calls, SMS, email, LinkedIn, meetings) with direction, quality signals, cold call classification, and ramp status.
 - **Consumers**:
   - `src/lib/queries/sga-activity.ts` — SGA activity performance page
   - `src/lib/reporting/context.ts` — reporting agent context
-- **Key Dependencies**: `SavvyGTMData.Task`, `SavvyGTMData.User`, `vw_funnel_master`
+- **Key Dependencies**: `CRMData.Task`, `CRMData.User`, `vw_funnel_master`
 - **Key Fields**: `activity_channel`, `direction`, `is_meaningful_connect`, `is_true_cold_call`, `cold_call_quality`, `activity_ramp_status`
 - **Note**: Local SQL file is `vw_sga_activity_performance_v2.sql` but BQ view name is `vw_sga_activity_performance` (no v2 suffix)
 
 ### Table: geocoded_addresses
-- **Dataset**: `savvy-gtm-analytics.Tableau_Views`
+- **Dataset**: `your-gcp-project.Tableau_Views`
 - **Type**: BASE TABLE (not a view)
 - **Purpose**: Stores geocoded lat/long coordinates for joined advisors. Populated by the `geocode-advisors` cron job.
 - **Consumers**: `vw_joined_advisor_location` (LEFT JOIN), `src/app/api/cron/geocode-advisors/route.ts`
 
 ### Table: q4_2025_forecast (**Active — Legacy Name**)
-- **Dataset**: `savvy-gtm-analytics.SavvyGTMData`
+- **Dataset**: `your-gcp-project.CRMData`
 - **Type**: BASE TABLE (backed by Google Sheet)
 - **Purpose**: Goal-setting table for quarterly targets. Contains quarterly goal allocations used by the forecast and goal-tracking features.
 - **Consumers**: `src/lib/queries/forecast-goals.ts`, goal progress tracking
@@ -117,9 +117,9 @@
 
 ---
 
-## Dataset: savvy_analytics (48 views — mostly Tableau/analytics)
+## Dataset: analytics (48 views — mostly Tableau/analytics)
 
-Most views in `savvy_analytics` are **not consumed by the Next.js dashboard directly**. They serve Tableau, ad-hoc analysis, or historical purposes. Dashboard-consumed views:
+Most views in `analytics` are **not consumed by the Next.js dashboard directly**. They serve Tableau, ad-hoc analysis, or historical purposes. Dashboard-consumed views:
 
 | View | Dashboard Consumer | Purpose |
 |------|-------------------|---------|
@@ -140,7 +140,7 @@ Most views in `savvy_analytics` are **not consumed by the Next.js dashboard dire
 
 ---
 
-## Dataset: SavvyGTMData (8 views + raw tables)
+## Dataset: CRMData (8 views + raw tables)
 
 | View | Purpose | Dashboard Consumer |
 |------|---------|-------------------|
@@ -157,7 +157,7 @@ Most views in `savvy_analytics` are **not consumed by the Next.js dashboard dire
 
 ## Raw Tables Directly Queried by Dashboard
 
-These `SavvyGTMData` tables are queried directly (not just consumed via views):
+These `CRMData` tables are queried directly (not just consumed via views):
 
 | Table | Query Files | Purpose |
 |-------|------------|---------|

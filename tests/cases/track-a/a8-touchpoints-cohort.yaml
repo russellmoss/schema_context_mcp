@@ -24,7 +24,7 @@ reference_sql: |
   FROM (
     SELECT q.lead_id, COUNT(DISTINCT act.task_id) AS touchpoints
     FROM leads q
-    INNER JOIN `savvy-gtm-analytics.Tableau_Views.vw_sga_activity_performance` act
+    INNER JOIN `your-gcp-project.Tableau_Views.vw_sga_activity_performance` act
       ON act.Full_prospect_id__c = q.lead_id
       AND act.task_created_date_est >= q.filter_date
       AND act.task_created_date_est < DATE('2026-04-01')
