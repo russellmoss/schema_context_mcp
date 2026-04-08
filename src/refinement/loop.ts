@@ -61,7 +61,7 @@ export async function runRefinementLoop(options: RefinementOptions): Promise<voi
     console.error(`\n--- Iteration ${iteration}/${maxIterations} ---\n`);
 
     // Load fresh config each iteration (may have been patched)
-    const config = loadConfig(configPath);
+    const config = await loadConfig(configPath);
     const cases = loadEvalCases(casesPath);
 
     // Run offline eval

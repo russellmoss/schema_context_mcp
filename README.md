@@ -29,6 +29,7 @@ The agent gets the warnings *before* writing a single line of SQL. No more doubl
 - [What It Does](#what-it-does)
 - [The Tools](#the-tools)
 - [Config in 5 Minutes](#config-in-5-minutes)
+- [Sharing a Schema Config Across Your Team](#sharing-a-schema-config-across-your-team)
 - [Works With dbt](#works-with-dbt)
 - [Trust Model](#trust-model)
 - [Eval Framework](#eval-framework)
@@ -65,6 +66,8 @@ Drop this in your `.mcp.json`:
   }
 }
 ```
+
+`SCHEMA_CONFIG` accepts a local file path or a URL (`https://...`). For team setups where everyone shares one config, see [Sharing a Schema Config Across Your Team](#sharing-a-schema-config-across-your-team).
 
 ### Three ways to get started
 
@@ -259,6 +262,124 @@ A production-scale example lives in [`examples/config.yaml`](examples/config.yam
 | `prefer_field` | "You used X, use Y instead" | Wrong dedup flag |
 | `require_filter` | "You queried X without required filter Y" | Missing record-type exclusion |
 | `date_type_rule` | DATE vs TIMESTAMP mismatches | Wrong wrapper function |
+
+## Sharing a Schema Config Across Your Team
+
+### How it works
+
+The schema config is designed to be **owned by one person** (or a small team) and **consumed by everyone else**. The owner maintains the config — field annotations, query rules, metric definitions, dangerous column warnings — and commits it to a git repository. Everyone else points their `SCHEMA_CONFIG` at the raw file URL. That's it. They never need a local copy, they never edit it directly, and they always get the latest version automatically.
+
+This is the recommended setup for any team or company using schema-context-mcp:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Git repo (e.g. your-org/analytics)                 │
+│                                                     │
+│  .claude/schema-config.yaml   <── owned by config   │
+│                                    maintainer(s)    │
+└──────────────────────┬──────────────────────────────┘
+                       │  raw URL
+          ┌────────────┼────────────┐
+          │            │            │
+      Analyst A    Analyst B    Analyst C
+      (consumer)   (consumer)   (consumer)
+          │            │            │
+     .mcp.json    .mcp.json    .mcp.json
+     points to    points to    points to
+     the URL      the URL      the URL
+```
+
+**Consumers** use the MCP tools to write SQL, run analyses, look up metric definitions, and lint queries. The schema config gives their AI agents the context to do this correctly — but consumers don't modify the config themselves.
+
+**If a consumer hits a problem** — a missing annotation, a field that should have a warning, a rule that's too strict or too loose — they open a pull request on the repository. The config owner reviews and merges it. Once merged, every consumer's agent picks up the change on their next session. No Slack messages, no manual syncing, no "make sure you pull the latest config."
+
+### Setup for the config owner
+
+The config owner is typically the data/analytics engineer, RevOps lead, or whoever knows the warehouse best. They:
+
+1. Create the `schema-config.yaml` file (use `npx schema-context-mcp onboard` to generate a starter config, or write one from scratch using the [Config in 5 Minutes](#config-in-5-minutes) section above)
+2. Commit it to a git repository the team has access to — this can be your existing analytics repo, dashboard repo, or a dedicated config repo
+3. Share the raw file URL and the `.mcp.json` snippet (below) with the team
+
+That's the entire admin setup. From then on, the owner maintains the config through normal git workflow — edit, commit, push. PRs from consumers come in as suggestions.
+
+### Setup for consumers (analysts, engineers, anyone writing SQL)
+
+Each consumer needs two things:
+
+1. **Warehouse credentials** — a BigQuery service account key file (or whatever your connector requires). Your config owner or IT team provides this.
+2. **A `.mcp.json` file** — drop this in your home directory or project root:
+
+```json
+{
+  "mcpServers": {
+    "schema-context": {
+      "command": "npx",
+      "args": ["-y", "@mossrussell/schema-context-mcp"],
+      "env": {
+        "WAREHOUSE_CONNECTOR": "bigquery",
+        "BIGQUERY_PROJECT": "your-project-id",
+        "BIGQUERY_KEY_FILE": "/path/to/your/service-account.json",
+        "SCHEMA_CONFIG": "https://raw.githubusercontent.com/your-org/your-repo/main/.claude/schema-config.yaml"
+      }
+    }
+  }
+}
+```
+
+That's it. No cloning repos, no installing packages manually, no local config files to keep in sync. `npx` handles the package, and the URL fetches the latest config every time.
+
+### How to get the raw file URL
+
+Your config owner commits `schema-config.yaml` to the repo, then grabs the raw URL:
+
+**GitHub** — navigate to the file, click **Raw**, copy the URL:
+
+```
+https://raw.githubusercontent.com/your-org/your-repo/main/.claude/schema-config.yaml
+```
+
+**GitLab**:
+
+```
+https://gitlab.com/your-org/your-repo/-/raw/main/.claude/schema-config.yaml
+```
+
+**Bitbucket**:
+
+```
+https://bitbucket.org/your-org/your-repo/raw/main/.claude/schema-config.yaml
+```
+
+### When consumers find issues
+
+Consumers will inevitably run into cases where the config doesn't cover their use case — a field that needs a warning, a term that isn't defined, a rule that's missing. The workflow for this is the same as any code change:
+
+1. **Consumer** opens a pull request on the repo, proposing a change to `schema-config.yaml`
+2. **Config owner** reviews the PR — checks that the annotation is accurate, the rule makes sense, and nothing conflicts with existing config
+3. **Owner merges** — every consumer's agent picks up the change on their next session
+
+This keeps the config accurate and evolving while preventing drift from unreviewed edits. The config owner has final say, but consumers drive improvements based on real-world usage.
+
+### Why one owner matters
+
+The schema config is your team's institutional knowledge about the warehouse — which fields to use for deduplication, which filters are required, which columns are dangerous, what business terms mean. If everyone edits it independently, you get conflicting annotations and rules that contradict each other.
+
+One owner (or a small owning team) ensures:
+- **Consistency** — no conflicting rules or contradictory annotations
+- **Accuracy** — changes are reviewed by someone who knows the warehouse
+- **Accountability** — there's a clear person to ask when something seems wrong
+- **Quality** — the config stays clean and doesn't accumulate stale annotations
+
+### Private repos
+
+If your config repo is private, the raw URL will return a 401. Options:
+
+- **Simplest**: Consumers clone the repo locally and use a local file path in their `.mcp.json`. Run `git pull` periodically to stay current. This still gives you centralized ownership — the config lives in one place, consumers just need a local checkout.
+- **Internal endpoint**: Serve the YAML from an internal HTTP endpoint with appropriate auth.
+- **Make the config repo public**: If the config doesn't contain sensitive information (it typically doesn't — it's field names, rules, and definitions), consider making just the config repo public. This gives you the smoothest consumer experience.
+
+For most teams, the config file lives in a repo the team already has access to, so a local path after cloning works fine. The URL approach is ideal for zero-setup onboarding — new teammates just drop in the `.mcp.json` and they're productive immediately.
 
 ## Works With dbt
 

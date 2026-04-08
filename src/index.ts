@@ -23,18 +23,18 @@ const server = new McpServer({
 let config: SchemaConfig | null = null;
 let connector: WarehouseConnector | null = null;
 
-function getConfig(): SchemaConfig {
+async function getConfig(): Promise<SchemaConfig> {
   if (!config) {
     const configPath = process.env["SCHEMA_CONFIG"] ?? "./config/schema-config.yaml";
-    config = loadConfig(configPath);
+    config = await loadConfig(configPath);
     console.error(`Loaded config from ${configPath}`);
   }
   return config;
 }
 
-function getConnector(): WarehouseConnector {
+async function getConnector(): Promise<WarehouseConnector> {
   if (!connector) {
-    const cfg = getConfig();
+    const cfg = await getConfig();
     connector = new BigQueryConnector(cfg.connection.project, cfg.connection.key_file);
     console.error(`Initialized BigQuery connector for project ${cfg.connection.project}`);
   }
@@ -52,7 +52,7 @@ server.tool(
   },
   async ({ view, dataset, intent }) => {
     try {
-      const result = await describeView(view, getConnector(), getConfig(), dataset, intent);
+      const result = await describeView(view, await getConnector(), await getConfig(), dataset, intent);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -70,7 +70,7 @@ server.tool(
   },
   async ({ dataset }) => {
     try {
-      const result = await healthCheck(getConnector(), getConfig(), dataset);
+      const result = await healthCheck(await getConnector(), await getConfig(), dataset);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -89,7 +89,7 @@ server.tool(
   },
   async ({ dataset, search }) => {
     try {
-      const result = await listViews(getConnector(), getConfig(), dataset, search);
+      const result = await listViews(await getConnector(), await getConfig(), dataset, search);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -107,7 +107,7 @@ server.tool(
   },
   async ({ term }) => {
     try {
-      const result = resolveTerm(term, getConfig());
+      const result = resolveTerm(term, await getConfig());
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -126,7 +126,7 @@ server.tool(
   },
   async ({ metric, mode }) => {
     try {
-      const result = getMetric(getConfig(), metric, mode);
+      const result = getMetric(await getConfig(), metric, mode);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -145,7 +145,7 @@ server.tool(
   },
   async ({ rule_id, search }) => {
     try {
-      const result = getRule(getConfig(), rule_id, search);
+      const result = getRule(await getConfig(), rule_id, search);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -163,7 +163,7 @@ server.tool(
   },
   async ({ sql }) => {
     try {
-      const result = lintQuery(sql, getConfig());
+      const result = lintQuery(sql, await getConfig());
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -339,7 +339,7 @@ async function runPromote(): Promise<void> {
   const hasRealTask = args.includes('--real-task');
   const configInGit = args.includes('--config-in-git');
 
-  const cfg = loadConfig(configPath);
+  const cfg = await loadConfig(configPath);
   const conn = new BigQueryConnector(cfg.connection.project, cfg.connection.key_file);
 
   // Run eval suite

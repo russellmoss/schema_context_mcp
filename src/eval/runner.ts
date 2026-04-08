@@ -165,7 +165,7 @@ interface SuiteResult {
 
 async function run(): Promise<void> {
   const args = parseCliArgs();
-  const config = loadConfig(args.config);
+  const config = await loadConfig(args.config);
 
   // Initialize connector for online mode
   let connector: WarehouseConnector | undefined;

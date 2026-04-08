@@ -1,6 +1,6 @@
 {
   "name": "@mossrussell/schema-context-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server providing AI agents with live, annotated warehouse schema context",
   "main": "dist/index.js",
   "bin": {
