@@ -30,6 +30,7 @@ The agent gets the warnings *before* writing a single line of SQL. No more doubl
 - [The Tools](#the-tools)
 - [Config in 5 Minutes](#config-in-5-minutes)
 - [Sharing a Schema Config Across Your Team](#sharing-a-schema-config-across-your-team)
+- [Going Remote: Zero-Install Team Access](#going-remote-zero-install-team-access)
 - [Works With dbt](#works-with-dbt)
 - [Trust Model](#trust-model)
 - [Eval Framework](#eval-framework)
@@ -380,6 +381,28 @@ If your config repo is private, the raw URL will return a 401. Options:
 - **Make the config repo public**: If the config doesn't contain sensitive information (it typically doesn't — it's field names, rules, and definitions), consider making just the config repo public. This gives you the smoothest consumer experience.
 
 For most teams, the config file lives in a repo the team already has access to, so a local path after cloning works fine. The URL approach is ideal for zero-setup onboarding — new teammates just drop in the `.mcp.json` and they're productive immediately.
+
+## Going Remote: Zero-Install Team Access
+
+The shared-config setup above still requires each user to install the npm package and configure warehouse credentials locally. For teams who want to eliminate **all** local setup — no `npm install`, no service account keys, no warehouse credentials on user machines — you can deploy schema-context-mcp as a remote MCP server on Cloud Run (or any container host).
+
+In this model, one admin deploys the server with the schema config and warehouse credentials baked into the container. The admin manages per-user API keys through their own tooling — a simple admin dashboard, a CLI script, or whatever fits your workflow. Teammates connect with nothing more than a `.mcp.json` containing a URL and their API key:
+
+```json
+{
+  "mcpServers": {
+    "schema-context": {
+      "type": "http",
+      "url": "https://schema-context.your-org.run.app/mcp",
+      "headers": {
+        "Authorization": "Bearer sk-your-api-key"
+      }
+    }
+  }
+}
+```
+
+No npm package, no GCP credentials, no local setup beyond one JSON file. New teammates go from zero to productive in under a minute. The admin retains full control — they can rotate keys, enforce rate limits, add audit logging, and shut off access instantly. A full implementation of this pattern — including dashboard-integrated API key management, query validation, audit logging, and cost controls — is documented at [docs/remote-deployment.md](docs/remote-deployment.md).
 
 ## Works With dbt
 
